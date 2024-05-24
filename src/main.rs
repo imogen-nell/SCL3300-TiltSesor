@@ -256,7 +256,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         println!("********************");
         match execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X") {
-            Some(angle) => println!("angle: {}", angle),
+            Some(angle) => {/*do nothing*/},
             None => println!("Failed to execute angle command"),
         }
         println!("********************");
