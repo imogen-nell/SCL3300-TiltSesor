@@ -129,8 +129,8 @@ fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>>
     spi.read(&mut ret)?;
     std::thread::sleep(std::time::Duration::from_millis(20));
     cs.set_high();
-    std::thread::sleep(std::time::Duration::from_millis(15));
-    println!("read: [{}]", ret.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+   // std::thread::sleep(std::time::Duration::from_millis(15));
+    //println!("read: [{}]", ret.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     Ok(ret) // Return the owned Vec<u8>
 }
 
@@ -139,7 +139,7 @@ fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
     spi.write(data);
     sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
     cs.set_high();
-    sleep(Duration::from_millis(15));
+    //sleep(Duration::from_millis(15));
 }
 
 // Performs write and read, the read will 
@@ -153,7 +153,7 @@ fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>
     spi.read(&mut response)?;
     std::thread::sleep(std::time::Duration::from_millis(40));
     cs.set_high();
-    std::thread::sleep(std::time::Duration::from_millis(5));
+    //std::thread::sleep(std::time::Duration::from_millis(5));
     Ok(response.to_vec())
 }
 
