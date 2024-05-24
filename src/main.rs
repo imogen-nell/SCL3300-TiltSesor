@@ -226,7 +226,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     
     
     let abs_hexnum = i16::from_le_bytes([hexnum[0], hexnum[1]]) as f64;
-    println!("abs_hexnum: {}", abs_hexnum);
+    //println!("abs_hexnum: {}", abs_hexnum);
     let angle = (((abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0)*100.0).round() /100.0;
     println!("{}: {} deg", key, angle);
     Some(angle)
