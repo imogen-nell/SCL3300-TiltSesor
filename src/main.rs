@@ -47,11 +47,11 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
-    let crc1 = format!("{:02X}", calculate_crc(&resp1));
-    let crc2 = format!("{:02X}", calculate_crc(&resp2));
-    let crc3 = format!("{:02X}", calculate_crc(&resp3));
-    let crc4 = format!("{:02X}", calculate_crc(&resp4));
-    let crc5 = format!("{:02X}", calculate_crc(&status));
+    let crc1 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp1)));
+    // let crc2 = format!("{:02X}", calculate_crc(&resp2));
+    // let crc3 = format!("{:02X}", calculate_crc(&resp3));
+    // let crc4 = format!("{:02X}", calculate_crc(&resp4));
+    // let crc5 = format!("{:02X}", calculate_crc(&status));
 
     if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -59,29 +59,29 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
         println!("calculated CRC: {}", crc1);
     }
 
-    if format!("{:02X}", resp2[3]) != crc2 {
-        println!("SW_RESET Checksum error:");
-        println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
-        println!("calculated CRC: {}", crc2);
-    }
+    // if format!("{:02X}", resp2[3]) != crc2 {
+    //     println!("SW_RESET Checksum error:");
+    //     println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
+    //     println!("calculated CRC: {}", crc2);
+    // }
 
-    if format!("{:02X}", resp3[3]) != crc3 {
-        println!("MODE_1 Checksum error:");
-        println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
-        println!("calculated CRC: {}", crc3);
-    }
+    // if format!("{:02X}", resp3[3]) != crc3 {
+    //     println!("MODE_1 Checksum error:");
+    //     println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
+    //     println!("calculated CRC: {}", crc3);
+    // }
 
-    if format!("{:02X}", resp4[3]) != crc4 {
-        println!("ANG_CTRL Checksum error:");
-        println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
-        println!("calculated CRC: {}", crc4);
-    }
+    // if format!("{:02X}", resp4[3]) != crc4 {
+    //     println!("ANG_CTRL Checksum error:");
+    //     println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
+    //     println!("calculated CRC: {}", crc4);
+    // }
 
-    if format!("{:02X}", status[3]) != crc5 {
-        println!("Status Checksum error:");
-        println!("status[3]: {}", format!("{:02X}", status[3]));
-        println!("calculated CRC: {}", crc5);
-    }
+    // if format!("{:02X}", status[3]) != crc5 {
+    //     println!("Status Checksum error:");
+    //     println!("status[3]: {}", format!("{:02X}", status[3]));
+    //     println!("calculated CRC: {}", crc5);
+    // }
 
     sleep(Duration::from_millis(25));
     println!("*****start up sequence complete*****");
@@ -89,30 +89,35 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
-fn calculate_crc(data: &[u8]) -> u8 {
+fn calculate_crc(data: u32) -> u8 {
     let mut crc: u8 = 0xFF;
-    let mut bytes_iter = data.iter().take(3);
-    for &byte in bytes_iter {
-        crc = crc8(byte, crc);
+    for bit_index in (8..=31).rev() {
+        let bit_value = ((data >> bit_index) & 0x01) as u8;
+        crc = crc8(bit_value, crc);
     }
     !crc
 }
 
-fn crc8(byte: u8, mut crc: u8) -> u8 {
-    for _ in 0..8 {
-        let temp = crc & 0x80;
-        crc <<= 1;
-        if (byte & 0x80) != 0 {
-            crc ^= 0x1D;
-        }
-        if temp != 0 {
-            crc ^= 0x1D;
-        }
+fn crc8(bit_value: u8, mut crc: u8) -> u8 {
+    let temp = crc & 0x80;
+    if bit_value == 0x01 {
+        crc ^= 0x80;
+    }
+    crc <<= 1;
+    if temp > 0 {
+        crc ^= 0x1D;
     }
     crc
 }
 
-
+fn bytes_to_u32(data: &[u8]) -> u32 {
+    let mut result: u32 = 0;
+    for &byte in data {
+        result <<= 8; // Shift the current value left by 8 bits
+        result |= byte as u32; // Bitwise OR operation to append the byte to the result
+    }
+    result
+}
 
 
 
