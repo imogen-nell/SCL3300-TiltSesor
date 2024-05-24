@@ -96,6 +96,7 @@ fn calculate_crc(data: u32) -> u8 {
     for bit_index in (8..=31).rev() {
         let bit_value = ((data >> bit_index) & 0x01) as u8;
         println!("data:{}" , data);
+        println!("bit_value:{}" , bit_value);
         crc = crc8(bit_value, crc);
     }
     !crc
