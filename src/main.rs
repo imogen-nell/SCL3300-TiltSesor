@@ -105,6 +105,7 @@ fn calculate_crc(data: u32) -> u8 {
 fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     let temp = crc & 0x80;
     if bit_value == 0x01 {
+        println!("true" );
         crc ^= 0x80;
     }
     crc <<= 1;
