@@ -224,7 +224,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     }
     println!("Data: [{}]", hexnum.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
-    let abs_hexnum = hexnum[0] as f64;
+    let abs_hexnum = i16::from_le_bytes([hexnum[0], hexnum[1]]) as f64;
     let angle = (abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0;
     println!("{}: {} deg", key, angle);
     Some(angle.round() / 100.0)
@@ -260,10 +260,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     println!("********************");
     //     //thread::sleep(Duration::from_secs(.5));
     // }
-    let abs_hexnum = 0xFFFF as f64;
-    let mut angle = (abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0;
-    
-    angle = (angle * 100.0).round() / 100.0;
-    println!("{} deg", angle);
+
     Ok(())
 }   
