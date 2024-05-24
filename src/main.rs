@@ -134,13 +134,13 @@ fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>>
     Ok(ret) // Return the owned Vec<u8>
 }
 
-fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
-    cs.set_low();
-    spi.write(data);
-    sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
-    cs.set_high();
-    //sleep(Duration::from_millis(15));
-}
+// fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
+//     cs.set_low();
+//     spi.write(data);
+//     sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
+//     cs.set_high();
+//     //sleep(Duration::from_millis(15));
+// }
 
 // Performs write and read, the read will 
 // be response to previous request as per the protocol
@@ -172,21 +172,32 @@ fn get_op(data: &str) {
 // Executes the command and prints the response
 // Argument command: list of 4 bytes to write e.g., ['0x00', '0x00', '0x00', '0x00']
 // Argument key: string to print the command name e.g., "WHOAMI"
-fn execute_command(command: &[&str], key: &str) {
-    write(command);
-    let i = frame(command);
-    if i[3] as u8 != calculate_crc(&i) {
+fn execute_command(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str) {
+    spi.write(command);
+    let frame_result = frame(spi, cs, command);
+    let i = match frame_result {
+        Ok(data) => data,
+        Err(err) => {
+            println!("Error: {:?}", err);
+            return;
+        }
+    };
+    
+    let i_slice = i.as_slice();
+    let crc = format!("{:02X}", calculate_crc(bytes_to_u32(i_slice)));
+    
+    if format!("{:02X}", i_slice[3]) != crc {
         println!("checksum error");
         return;
     } else {
-        let i_hex = to_hex(&i);
         println!("\n*************************\n");
         println!("{} response:", key);
-        get_op(&i_hex[0]);
-        println!("data: {:?}", to_long_hex(&i_hex[1..3]));
+        get_op(&format!("{:02X}", i_slice[0]));
+        println!("data: {:?}", i_slice[1..3].to_vec());
         println!("\n*************************\n");
     }
 }
+
 
 
 //
