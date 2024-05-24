@@ -94,9 +94,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 fn calculate_crc(data: u32) -> u8 {
     let mut crc: u8 = 0xFF;
     for bit_index in (8..=31).rev() {
-        let bit_value = ((data >> bit_index) & 0x01) as u8;
-        println!("data:{}" , data);
-        println!("bit_value:{}" , bit_value);
+        let bit_value: u8 = ((data >> bit_index) & 0x01) as u8;
         crc = crc8(bit_value, crc);
     }
     !crc
@@ -105,7 +103,6 @@ fn calculate_crc(data: u32) -> u8 {
 fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     let temp = crc & 0x80;
     if bit_value == 0x01 {
-        println!("true" );
         crc ^= 0x80;
     }
     crc <<= 1;
