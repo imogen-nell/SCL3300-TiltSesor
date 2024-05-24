@@ -3,6 +3,7 @@ use std::thread::sleep;
 use std::thread;
 use std::error::Error;
 use std::time::Duration;
+use std::mem;
 use rppal::gpio::{Gpio, OutputPin};
 use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
 
@@ -69,7 +70,8 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     let status = read(spi, cs)?;
 
     println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-    println!("Type of resp1[3]: {}", std::any::type_name::<_>(&resp1[3]));
+    println!("Data type of resp1[3]: {:?}", std::any::type_name_of_val(&resp1[3]));
+
 
 
     // println!("SW TO BNK 0 : {:?}", &resp1);
