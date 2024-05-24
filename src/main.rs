@@ -171,6 +171,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     cs.set_high();
     thread::sleep(Duration::from_millis(50));
     //finidh spi setup
+    //start up sequence
+    start_up(&mut spi, &mut cs)?;
+    //finish start up sequence
 
 
 
