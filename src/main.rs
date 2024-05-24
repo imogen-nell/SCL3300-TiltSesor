@@ -74,7 +74,8 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     let crc = calculate_crc(&resp1);
-    if resp1[3] != crc {
+
+    if format!("{:02X}", resp1[3]) != format!("{:02X}",crc) {
         println!("Checksum error:");
         println!("resp1[3]: {}", resp1[3]);
         println!("calculated CRC: {}", crc);
@@ -122,7 +123,6 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     }
     crc
 }
-
 
 // Read bytes from the SPI device
 // return: vector of bytes read
