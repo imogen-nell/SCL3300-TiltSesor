@@ -193,7 +193,7 @@ fn execute_command(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &s
         println!("\n*************************\n");
         println!("{} response:", key);
         get_op(&format!("{:02X}", i_slice[0]));
-        println!("data: {:?}", i_slice[1..3].iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        println!("Data: [{}]", i_slice[1..3].iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
         println!("\n*************************\n");
     }
 }
