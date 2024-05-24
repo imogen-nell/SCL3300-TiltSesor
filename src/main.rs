@@ -48,10 +48,10 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     let crc1 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp1)));
-    // let crc2 = format!("{:02X}", calculate_crc(&resp2));
-    // let crc3 = format!("{:02X}", calculate_crc(&resp3));
-    // let crc4 = format!("{:02X}", calculate_crc(&resp4));
-    // let crc5 = format!("{:02X}", calculate_crc(&status));
+    let crc2 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp2)));
+    let crc3 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp3)));
+    let crc4 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp4)));
+    let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&status)));
 
     if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -59,29 +59,29 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
         println!("calculated CRC: {}", crc1);
     }
 
-    // if format!("{:02X}", resp2[3]) != crc2 {
-    //     println!("SW_RESET Checksum error:");
-    //     println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
-    //     println!("calculated CRC: {}", crc2);
-    // }
+    if format!("{:02X}", resp2[3]) != crc2 {
+        println!("SW_RESET Checksum error:");
+        println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
+        println!("calculated CRC: {}", crc2);
+    }
 
-    // if format!("{:02X}", resp3[3]) != crc3 {
-    //     println!("MODE_1 Checksum error:");
-    //     println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
-    //     println!("calculated CRC: {}", crc3);
-    // }
+    if format!("{:02X}", resp3[3]) != crc3 {
+        println!("MODE_1 Checksum error:");
+        println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
+        println!("calculated CRC: {}", crc3);
+    }
 
-    // if format!("{:02X}", resp4[3]) != crc4 {
-    //     println!("ANG_CTRL Checksum error:");
-    //     println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
-    //     println!("calculated CRC: {}", crc4);
-    // }
+    if format!("{:02X}", resp4[3]) != crc4 {
+        println!("ANG_CTRL Checksum error:");
+        println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
+        println!("calculated CRC: {}", crc4);
+    }
 
-    // if format!("{:02X}", status[3]) != crc5 {
-    //     println!("Status Checksum error:");
-    //     println!("status[3]: {}", format!("{:02X}", status[3]));
-    //     println!("calculated CRC: {}", crc5);
-    // }
+    if format!("{:02X}", status[3]) != crc5 {
+        println!("Status Checksum error:");
+        println!("status[3]: {}", format!("{:02X}", status[3]));
+        println!("calculated CRC: {}", crc5);
+    }
 
     sleep(Duration::from_millis(25));
     println!("*****start up sequence complete*****");
