@@ -68,7 +68,8 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     // Response to request 5
     let status = read(spi, cs)?;
 
-    println!("status: {:?}", &status);
+    println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+
 
     // println!("SW TO BNK 0 : {:?}", &resp1);
     // if resp1[3] != calculate_crc(&resp1) {
