@@ -259,8 +259,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             Some(angle) => {/*do nothing*/},
             None => println!("Failed to execute angle command"),
         }
+        match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
+            Some(angle) => {/*do nothing*/},
+            None => println!("Failed to execute angle command"),
+        }
+        match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
+            Some(angle) => {/*do nothing*/},
+            None => println!("Failed to execute angle command"),
+        }
         println!("********************");
-        //thread::sleep(Duration::from_secs(.5));
+        // thread::sleep(Duration::from_secs(.5));
     }
 
     Ok(())
