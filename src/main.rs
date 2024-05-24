@@ -224,10 +224,12 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     }
     println!("Data: [{}]", hexnum.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
+    
     let abs_hexnum = i16::from_le_bytes([hexnum[0], hexnum[1]]) as f64;
-    let angle = (abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0;
+    println!("abs_hexnum: {}", abs_hexnum);
+    let angle = (((abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0)*100.0).round() /100.0;
     println!("{}: {} deg", key, angle);
-    Some(angle.round() / 100.0)
+    Some(angle)
     
 }
 
@@ -250,16 +252,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     start_up(&mut spi, &mut cs)?;
     execute_command(&mut spi, &mut cs, WHOAMI, "WHOAMI");
     
-    //loooooooping angle readings
-    // loop {
-    //     println!("********************");
-    //     match execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X") {
-    //         Some(angle) => println!("angle: {}", angle),
-    //         None => println!("Failed to execute angle command"),
-    //     }
-    //     println!("********************");
-    //     //thread::sleep(Duration::from_secs(.5));
-    // }
+    ///loooooooping angle readings
+    loop {
+        println!("********************");
+        match execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X") {
+            Some(angle) => println!("angle: {}", angle),
+            None => println!("Failed to execute angle command"),
+        }
+        println!("********************");
+        //thread::sleep(Duration::from_secs(.5));
+    }
 
     Ok(())
 }   
