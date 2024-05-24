@@ -129,7 +129,7 @@ fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>>
     std::thread::sleep(std::time::Duration::from_millis(20));
     cs.set_high();
     std::thread::sleep(std::time::Duration::from_millis(15));
-    println!("read: {:?}", ret.iter().map(|x| format!("{:02X}", x)).collect::<Vec<_>>());
+    println!("read: [{}]", ret.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     Ok(ret) // Return the owned Vec<u8>
 }
 
