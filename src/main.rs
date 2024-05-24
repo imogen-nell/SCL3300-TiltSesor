@@ -164,9 +164,9 @@ fn get_op(data: &str) {
     let num = i64::from_str_radix(data.trim_start_matches("0x"), 16).unwrap();
     let num_binary = format!("{:08b}", num);
     
-    println!("RW: {}", &num_binary[0..2]);
+    println!("RW  : {}", &num_binary[0..2]);
     println!("ADDR: {:X}", i64::from_str_radix(&num_binary[2..7], 2).unwrap());
-    println!("RS: {}", &num_binary[7..]);
+    println!("RS  : {}", &num_binary[7..]);
 }
 
 // Executes the command and prints the response
@@ -193,7 +193,7 @@ fn execute_command(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &s
         println!("\n*************************\n");
         println!("{} response:", key);
         get_op(&format!("{:02X}", i_slice[0]));
-        println!("data: {:?}", i_slice[1..3].to_vec());
+        println!("data: {:?}", i_slice[1..3].iter().map(|&byte| format!("{:02X}", byte)).collect::<Vec<_>>());
         println!("\n*************************\n");
     }
 }
