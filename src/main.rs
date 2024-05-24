@@ -225,12 +225,66 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     println!("Data: [{}]", hexnum.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
     
-    let abs_hexnum = i16::from_le_bytes([hexnum[0], hexnum[1]]) as f64;
+    let abs_hexnum = i16::from_le_bytes([hexnum[1], hexnum[2]]) as f64;
     //println!("abs_hexnum: {}", abs_hexnum);
     let angle = (((abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0)*100.0).round() /100.0;
     println!("{}: {} deg", key, angle);
     Some(angle)
     
+}
+
+fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
+    //write in previous frame to ensure no garbage values 
+    cs.set_low();
+    spi.write(ANG_X);
+    sleep(Duration::from_millis(11)); // Must give it at least 10ms to process
+    cs.set_high();
+    //
+
+    let x = match frame(spi, cs, ANG_Y) {
+        Ok(data) => data,
+        Err(_) => {
+            println!("Error: failed to get responce");
+            return;
+        }
+    };
+    let y = match frame(spi, cs, ANG_Z) {
+        Ok(data) => data,
+        Err(_) => {
+            println!("Error: failed to get responce");
+            return;
+        }
+    };
+    let z = match read(spi, cs) {
+        Ok(data) => data,
+        Err(_) => {
+            println!("Error: failed to get responce");
+            return;
+        }
+    };
+
+    //crc check
+    if x[3] as u8 != calculate_crc(bytes_to_u32(&x)) {
+        println!("x checksum error");
+        return;
+    }
+    if y[3] as u8 != calculate_crc(bytes_to_u32(&y)) {
+        println!("cy hecksum error");
+        return;
+    }
+    if z[3] as u8 != calculate_crc(bytes_to_u32(&z)) {
+        println!("z checksum error");
+        return;
+    }       
+    
+    let angle = anlge_conversion(x);
+    println!(" {} deg", angle);    
+}
+
+fn anlge_conversion(data: Vec<u8>) -> f64 {
+    let abs_val = i16::from_le_bytes([data[1], data[2]]) as f64;
+    let angle = (((abs_val.abs() / 2_i16.pow(14) as f64) * 90.0) * 100.0).round() / 100.0;
+    angle
 }
 
 //
