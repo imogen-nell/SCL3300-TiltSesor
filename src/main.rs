@@ -69,7 +69,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     // Response to request 5
     let status = read(spi, cs)?;
 
-    println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    //println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
    // println!("Data type of resp1[3]: {:?}", std::any::type_name_of_val(&resp1[3]));
 
     // println!("SW TO BNK 0 : {:?}", &resp1);
@@ -77,17 +77,17 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     // if resp1[3] != calculate_crc(&resp1) {
     //     println!("checksum error resp1");
     // }
-    println!("SW RESET : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if resp2[3] != calculate_crc(&resp2) {
     //     println!("checksum error resp2");
     // }
-    println!("MODE 1   : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if resp3[3] != calculate_crc(&resp3) {
     //     println!("checksum error resp3");
     // }
-    println!("ANG CTRL : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if resp4[3] != calculate_crc(&resp4) {
     //     println!("checksum error resp4");
@@ -182,8 +182,5 @@ fn main() -> Result<(), Box<dyn Error>> {
     start_up(&mut spi, &mut cs)?;
     //finish start up sequence
 
-
-
-    println!("Hello, world!");
     Ok(())
 }   
