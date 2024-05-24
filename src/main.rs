@@ -205,7 +205,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
     cs.set_high();
     ///
-    let hexnum = match frame(spi, cs, command) {
+    let resp = match frame(spi, cs, command) {
         Ok(data) => data,
         Err(_) => {
             println!("Error: failed to get responce");
@@ -218,16 +218,13 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
         return None;
     }
     
-    if hexnum[3] as u8 != calculate_crc(bytes_to_u32(&hexnum)) {
+    if resp[3] as u8 != calculate_crc(bytes_to_u32(&resp)) {
         println!("checksum error");
         return None;
     }
-    println!("Data: [{}]", hexnum.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("Data: [{}]", resp.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
-    
-    let abs_hexnum = i16::from_le_bytes([hexnum[1], hexnum[2]]) as f64;
-    //println!("abs_hexnum: {}", abs_hexnum);
-    let angle = (((abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0)*100.0).round() /100.0;
+    let angle = anlge_conversion(resp);
     println!("{}: {} deg", key, angle);
     Some(angle)
     
@@ -277,8 +274,9 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
         return;
     }       
     
-    let angle = anlge_conversion(x);
-    println!(" {} deg", angle);    
+    println!("X : {} deg", anlge_conversion(x));   
+    println!("Y : {} deg", anlge_conversion(y));
+    println!("Z : {} deg", anlge_conversion(z)); 
 }
 
 fn anlge_conversion(data: Vec<u8>) -> f64 {
