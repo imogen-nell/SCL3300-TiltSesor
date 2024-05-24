@@ -9,19 +9,6 @@ use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
 
 const CS_TILT: u8 = 18; // pin12 is BCM 18
 
-// const SW_RESET: [u8; 4] = [0xB4, 0x00, 0x20, 0x98];
-// const WHOAMI: [u8; 4] = [0x40, 0x00, 0x00, 0x91];
-// const READ_STAT: [u8; 4] = [0x18, 0x00, 0x00, 0xE5];
-// const MODE_1: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
-// const READ_CMD: [u8; 4] = [0x34, 0x00, 0x00, 0xDF];
-// const WAKE_UP: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
-// const ANG_CTRL: [u8; 4] = [0xB0, 0x00, 0x1F, 0x6F];
-// const READ_CURR_BANK: [u8; 4] = [0x7C, 0x00, 0x00, 0xB3];
-// const SW_TO_BNK0: [u8; 4] = [0xFC, 0x00, 0x00, 0x73];
-// const ANG_X: [u8; 4] = [0x24, 0x00, 0x00, 0xC7];
-// const ANG_Y: [u8; 4] = [0x28, 0x00, 0x00, 0xCD];
-// const ANG_Z: [u8; 4] = [0x2C, 0x00, 0x00, 0xCB];
-
 const SW_RESET: &[u8] = &[0xB4, 0x00, 0x20, 0x98];
 const WHOAMI: &[u8] = &[0x40, 0x00, 0x00, 0x91];
 const READ_STAT: &[u8] = &[0x18, 0x00, 0x00, 0xE5];
@@ -34,19 +21,6 @@ const SW_TO_BNK0: &[u8] = &[0xFC, 0x00, 0x00, 0x73];
 const ANG_X: &[u8] = &[0x24, 0x00, 0x00, 0xC7];
 const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
 const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
-
-// const SW_RESET: u32        = 0xB4002098;
-// const WHOAMI: u32          = 0x40000091;
-// const READ_STAT: u32       = 0x180000E5;
-// const MODE_1: u32          = 0xB400001F;
-// const READ_CMD: u32        = 0x340000DF;
-// const WAKE_UP: u32         = 0xB400001F;
-// const ANG_CTRL: u32        = 0xB0001F6F;
-// const READ_CURR_BANK: u32  = 0x7C0000B3;
-// const SW_TO_BNK0: u32      = 0xFC000073;
-// const ANG_X: u32           = 0x240000C7;
-// const ANG_Y: u32           = 0x280000CD;
-// const ANG_Z: u32           = 0x2C0000CB;
 
 const BUS: u8 = 1;
 const DEV: u8 = 0;
@@ -77,6 +51,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     let crc2 = calculate_crc(&resp2);
     let crc3 = calculate_crc(&resp3);
     let crc4 = calculate_crc(&resp4);
+    let crc5 = calculate_crc(&status);
 
     if format!("{:02X}", resp1[3]) != format!("{:02X}",crc1) {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -102,10 +77,10 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
         println!("calculated CRC: {}", crc4);
     }
 
-    if format!("{:02X}", status[3]) != format!("{:02X}", calculate_crc(&status)) {
+    if format!("{:02X}", status[3]) != format!("{:02X}", crc5) {
         println!("Status Checksum error:");
         println!("status[3]: {}", format!("{:02X}", status[3]));
-        println!("calculated CRC: {}", calculate_crc(&status));
+        println!("calculated CRC: {}", crc5);
     }
 
     sleep(Duration::from_millis(25));
@@ -114,12 +89,12 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
-fn calculate_crc(data: &Vec<u8>) -> u8 {
+fn calculate_crc(data: &[u8]) -> u8 {
     let mut crc: u8 = 0xFF;
-    for byte in data.iter() {
-        for bit_index in (0..=7).rev() {
-            let bit_value = ((byte >> bit_index) & 0x01) as u8;
-            crc = crc8(bit_value, crc);
+    for &byte in data.iter().rev().skip(1) {
+        for bit_index in (0..8).rev() {
+            let bit_value = (byte >> bit_index) & 0x01;
+            crc = crc8(bit_value as u8, crc);
         }
     }
     !crc
@@ -136,6 +111,8 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     }
     crc
 }
+
+
 
 // Read bytes from the SPI device
 // return: vector of bytes read
