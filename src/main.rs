@@ -92,25 +92,25 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 fn calculate_crc(data: &[u8]) -> u8 {
     let mut crc: u8 = 0xFF;
     for &byte in data {
-        for bit_index in (0..8).rev() {
-            let bit_value = (byte >> bit_index) & 0x01;
-            crc = crc8(bit_value, crc);
-        }
+        crc = crc8(byte, crc);
     }
     !crc
 }
 
-fn crc8(bit_value: u8, mut crc: u8) -> u8 {
-    let temp = crc & 0x80;
-    if bit_value == 0x01 {
-        crc ^= 0x80;
-    }
-    crc <<= 1;
-    if temp > 0 {
-        crc ^= 0x1D;
+fn crc8(byte: u8, mut crc: u8) -> u8 {
+    for _ in 0..8 {
+        let temp = crc & 0x80;
+        crc <<= 1;
+        if (byte & 0x80) != 0 {
+            crc ^= 0x1D;
+        }
+        if temp != 0 {
+            crc ^= 0x1D;
+        }
     }
     crc
 }
+
 
 
 
