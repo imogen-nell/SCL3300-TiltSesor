@@ -1,7 +1,9 @@
-// use std::io;
-// use std::thread;
+use std::io;
+use std::thread;
+use std::error::Error;
 use std::time::Duration;
-use rppal::gpio::{Gpio, Level};
+use rppal::gpio::{Gpio, Trigger};
+use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
 
 const CS_TILT: u8 = 18; // pin12 is BCM 18
 
@@ -20,7 +22,20 @@ const ANG_Z: [u8; 4] = [0x2C, 0x00, 0x00, 0xCB];
 
 const BUS: u8 = 1;
 const DEV: u8 = 0;
+fn main() -> Result<(), Box<dyn Error>> {
+    //set up spi device
+    let mut spi = Spidev::open(format!("/dev/spidev{}.{}", BUS, DEV)).unwrap();
+    let options = SpidevOptions::new()
+        .max_speed_hz(2_000_000)
+        .mode(SpiModeFlags::SPI_MODE_0)
+        .build();
+    spi.configure(&options).expect("SPI configuration failed");
 
-fn main() {
+    let mut cs = Gpio::new()?.get(CS_TILT)?.into_output();
+    cs.set_high();
+    thread::sleep(Duration::from_millis(50));
+    //
+
     println!("Hello, world!");
-}
+    Ok(())
+}   
