@@ -91,7 +91,8 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 
 fn calculate_crc(data: &[u8]) -> u8 {
     let mut crc: u8 = 0xFF;
-    for &byte in data {
+    let mut bytes_iter = data.iter().take(3);
+    for &byte in bytes_iter {
         crc = crc8(byte, crc);
     }
     !crc
