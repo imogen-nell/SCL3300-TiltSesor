@@ -55,32 +55,23 @@ const DEV: u8 = 0;
 fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> {
     println!("***** start up sequence *****");
     cs.set_high();
-    // Request 1
     spi.write(SW_TO_BNK0).unwrap();
 
-    // Request 2 & response to 1
     let resp1 = frame(spi, cs, SW_RESET)?;
-    // Request 3 SET MEASUREMENT MODE
     let resp2 = frame(spi, cs, MODE_1)?;
-    // Request 4 write ANG_CTRL to enable angle outputs
     let resp3 = frame(spi, cs, ANG_CTRL)?;
-    // Request 5 clear and read STATUS
     let resp4 = frame(spi, cs, READ_STAT)?;
-    // Response to request 5
     let status = read(spi, cs)?;
 
     //println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
    // println!("Data type of resp1[3]: {:?}", std::any::type_name_of_val(&resp1[3]));
 
-    // println!("SW TO BNK 0 : {:?}", &resp1);
-
-
-
+    println!("SW TO BNK 0 : {:?}", &resp1);
     println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-    println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-    
+    println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+
     let crc = calculate_crc(&resp1);
     if resp1[3] != crc {
         println!("Checksum error:");
