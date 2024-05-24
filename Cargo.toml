@@ -1,0 +1,8 @@
+[package]
+name = "SCL3300-tiltsensor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rppal = "0.18.0"
+spidev = "0.6.0"
