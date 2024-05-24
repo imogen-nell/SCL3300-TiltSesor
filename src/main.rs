@@ -121,8 +121,6 @@ fn bytes_to_u32(data: &[u8]) -> u32 {
     result
 }
 
-
-
 // Read bytes from the SPI device
 // return: vector of bytes read
 fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -158,6 +156,38 @@ fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>
     //std::thread::sleep(std::time::Duration::from_millis(5));
     Ok(response.to_vec())
 }
+// Separates the OP code into RW, ADDR, RS and prints them on the screen
+// Used by execute_command()
+// Argument data: 8-bit / 1-byte hex string e.g., '0xC1'
+// 2 LSB - RW, next 5 bits - ADDR, last 1 bit - RS
+fn get_op(data: &str) {
+    let num = i64::from_str_radix(data.trim_start_matches("0x"), 16).unwrap();
+    let num_binary = format!("{:08b}", num);
+    
+    println!("RW: {}", &num_binary[0..2]);
+    println!("ADDR: {:X}", i64::from_str_radix(&num_binary[2..7], 2).unwrap());
+    println!("RS: {}", &num_binary[7..]);
+}
+
+// Executes the command and prints the response
+// Argument command: list of 4 bytes to write e.g., ['0x00', '0x00', '0x00', '0x00']
+// Argument key: string to print the command name e.g., "WHOAMI"
+fn execute_command(command: &[&str], key: &str) {
+    write(command);
+    let i = frame(command);
+    if i[3] as u8 != calculate_crc(&i) {
+        println!("checksum error");
+        return;
+    } else {
+        let i_hex = to_hex(&i);
+        println!("\n*************************\n");
+        println!("{} response:", key);
+        get_op(&i_hex[0]);
+        println!("data: {:?}", to_long_hex(&i_hex[1..3]));
+        println!("\n*************************\n");
+    }
+}
+
 
 //
 
@@ -174,9 +204,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     cs.set_high();
     thread::sleep(Duration::from_millis(50));
     //finidh spi setup
-    //start up sequence
-    start_up(&mut spi, &mut cs)?;
-    //finish start up sequence
 
+    start_up(&mut spi, &mut cs)?;
+    
+    
     Ok(())
 }   
