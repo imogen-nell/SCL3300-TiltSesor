@@ -47,37 +47,37 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
-    let crc1 = calculate_crc(&resp1);
-    let crc2 = calculate_crc(&resp2);
-    let crc3 = calculate_crc(&resp3);
-    let crc4 = calculate_crc(&resp4);
-    let crc5 = calculate_crc(&status);
+    let crc1 = format!("{:02X}", calculate_crc(&resp1));
+    let crc2 = format!("{:02X}", calculate_crc(&resp2));
+    let crc3 = format!("{:02X}", calculate_crc(&resp3));
+    let crc4 = format!("{:02X}", calculate_crc(&resp4));
+    let crc5 = format!("{:02X}", calculate_crc(&status));
 
-    if format!("{:02X}", resp1[3]) != format!("{:02X}",crc1) {
+    if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
         println!("resp1[3]: {}", format!("{:02X}", resp1[3]));
         println!("calculated CRC: {}", crc1);
     }
 
-    if format!("{:02X}", resp2[3]) != format!("{:02X}",crc2) {
+    if format!("{:02X}", resp2[3]) != crc2 {
         println!("SW_RESET Checksum error:");
         println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
         println!("calculated CRC: {}", crc2);
     }
 
-    if format!("{:02X}", resp3[3]) != format!("{:02X}",crc3) {
+    if format!("{:02X}", resp3[3]) != crc3 {
         println!("MODE_1 Checksum error:");
         println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
         println!("calculated CRC: {}", crc3);
     }
 
-    if format!("{:02X}", resp4[3]) != format!("{:02X}",crc4) {
+    if format!("{:02X}", resp4[3]) != crc4 {
         println!("ANG_CTRL Checksum error:");
         println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
         println!("calculated CRC: {}", crc4);
     }
 
-    if format!("{:02X}", status[3]) != format!("{:02X}", crc5) {
+    if format!("{:02X}", status[3]) != crc5 {
         println!("Status Checksum error:");
         println!("status[3]: {}", format!("{:02X}", status[3]));
         println!("calculated CRC: {}", crc5);
@@ -91,10 +91,10 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 
 fn calculate_crc(data: &[u8]) -> u8 {
     let mut crc: u8 = 0xFF;
-    for &byte in data.iter().rev().skip(1) {
+    for &byte in data {
         for bit_index in (0..8).rev() {
             let bit_value = (byte >> bit_index) & 0x01;
-            crc = crc8(bit_value as u8, crc);
+            crc = crc8(bit_value, crc);
         }
     }
     !crc
@@ -111,6 +111,7 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     }
     crc
 }
+
 
 
 
