@@ -77,7 +77,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 
     if format!("{:02X}", resp1[3]) != format!("{:02X}",crc) {
         println!("Checksum error:");
-        println!("resp1[3]: {}", resp1[3]);
+        println!("resp1[3]: {}", format!("{:02X}", resp1[3]));
         println!("calculated CRC: {}", crc);
     }
     // if resp2[3] != calculate_crc(&resp2) {
