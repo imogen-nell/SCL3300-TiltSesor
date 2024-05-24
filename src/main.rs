@@ -74,25 +74,30 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
 
     // println!("SW TO BNK 0 : {:?}", &resp1);
 
-    // if resp1[3] != calculate_crc(&resp1) {
-    //     println!("checksum error resp1");
-    // }
-    println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
+
+    println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    
+    let crc = calculate_crc(&resp1);
+    if resp1[3] != crc {
+        println!("Checksum error:");
+        println!("resp1[3]: {}", resp1[3]);
+        println!("calculated CRC: {}", crc);
+    }
     // if resp2[3] != calculate_crc(&resp2) {
     //     println!("checksum error resp2");
     // }
-    println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if resp3[3] != calculate_crc(&resp3) {
     //     println!("checksum error resp3");
     // }
-    println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if resp4[3] != calculate_crc(&resp4) {
     //     println!("checksum error resp4");
     // }
-    println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
     // if status[3] != calculate_crc(&status) {
     //     println!("checksum error status");
