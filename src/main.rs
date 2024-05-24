@@ -1,81 +1,108 @@
-use std::io::Write;
+use std::io::{Write, Read};
 use std::thread::sleep;
+use std::thread;
 use std::error::Error;
 use std::time::Duration;
-use rppal::gpio::{Gpio, Trigger};
+use rppal::gpio::{Gpio, OutputPin};
 use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
 
 const CS_TILT: u8 = 18; // pin12 is BCM 18
 
-const SW_RESET: [u8; 4] = [0xB4, 0x00, 0x20, 0x98];
-const WHOAMI: [u8; 4] = [0x40, 0x00, 0x00, 0x91];
-const READ_STAT: [u8; 4] = [0x18, 0x00, 0x00, 0xE5];
-const MODE_1: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
-const READ_CMD: [u8; 4] = [0x34, 0x00, 0x00, 0xDF];
-const WAKE_UP: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
-const ANG_CTRL: [u8; 4] = [0xB0, 0x00, 0x1F, 0x6F];
-const READ_CURR_BANK: [u8; 4] = [0x7C, 0x00, 0x00, 0xB3];
-const SW_TO_BNK0: [u8; 4] = [0xFC, 0x00, 0x00, 0x73];
-const ANG_X: [u8; 4] = [0x24, 0x00, 0x00, 0xC7];
-const ANG_Y: [u8; 4] = [0x28, 0x00, 0x00, 0xCD];
-const ANG_Z: [u8; 4] = [0x2C, 0x00, 0x00, 0xCB];
+// const SW_RESET: [u8; 4] = [0xB4, 0x00, 0x20, 0x98];
+// const WHOAMI: [u8; 4] = [0x40, 0x00, 0x00, 0x91];
+// const READ_STAT: [u8; 4] = [0x18, 0x00, 0x00, 0xE5];
+// const MODE_1: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
+// const READ_CMD: [u8; 4] = [0x34, 0x00, 0x00, 0xDF];
+// const WAKE_UP: [u8; 4] = [0xB4, 0x00, 0x00, 0x1F];
+// const ANG_CTRL: [u8; 4] = [0xB0, 0x00, 0x1F, 0x6F];
+// const READ_CURR_BANK: [u8; 4] = [0x7C, 0x00, 0x00, 0xB3];
+// const SW_TO_BNK0: [u8; 4] = [0xFC, 0x00, 0x00, 0x73];
+// const ANG_X: [u8; 4] = [0x24, 0x00, 0x00, 0xC7];
+// const ANG_Y: [u8; 4] = [0x28, 0x00, 0x00, 0xCD];
+// const ANG_Z: [u8; 4] = [0x2C, 0x00, 0x00, 0xCB];
+
+const SW_RESET: &[u8] = &[0xB4, 0x00, 0x20, 0x98];
+const WHOAMI: &[u8] = &[0x40, 0x00, 0x00, 0x91];
+const READ_STAT: &[u8] = &[0x18, 0x00, 0x00, 0xE5];
+const MODE_1: &[u8] = &[0xB4, 0x00, 0x00, 0x1F];
+const READ_CMD: &[u8] = &[0x34, 0x00, 0x00, 0xDF];
+const WAKE_UP: &[u8] = &[0xB4, 0x00, 0x00, 0x1F];
+const ANG_CTRL: &[u8] = &[0xB0, 0x00, 0x1F, 0x6F];
+const READ_CURR_BANK: &[u8] = &[0x7C, 0x00, 0x00, 0xB3];
+const SW_TO_BNK0: &[u8] = &[0xFC, 0x00, 0x00, 0x73];
+const ANG_X: &[u8] = &[0x24, 0x00, 0x00, 0xC7];
+const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
+const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
+
+// const SW_RESET: u32        = 0xB4002098;
+// const WHOAMI: u32          = 0x40000091;
+// const READ_STAT: u32       = 0x180000E5;
+// const MODE_1: u32          = 0xB400001F;
+// const READ_CMD: u32        = 0x340000DF;
+// const WAKE_UP: u32         = 0xB400001F;
+// const ANG_CTRL: u32        = 0xB0001F6F;
+// const READ_CURR_BANK: u32  = 0x7C0000B3;
+// const SW_TO_BNK0: u32      = 0xFC000073;
+// const ANG_X: u32           = 0x240000C7;
+// const ANG_Y: u32           = 0x280000CD;
+// const ANG_Z: u32           = 0x2C0000CB;
 
 const BUS: u8 = 1;
 const DEV: u8 = 0;
 
 //Functions
-fn read_start_up() {
-    println!("*****(read) start up sequence *****");
+fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> {
+    println!("***** start up sequence *****");
     cs.set_high();
     // Request 1
-    write(SW_TO_BNK0);
+    spi.write(SW_TO_BNK0).unwrap();
 
     // Request 2 & response to 1
-    let resp1 = frame(SW_RESET);
-
+    let resp1 = frame(spi, cs, SW_RESET)?;
     // Request 3 SET MEASUREMENT MODE
-    let resp2 = frame(MODE_1);
-
+    let resp2 = frame(spi, cs, MODE_1)?;
     // Request 4 write ANG_CTRL to enable angle outputs
-    let resp3 = frame(ANG_CTRL);
-
+    let resp3 = frame(spi, cs, ANG_CTRL)?;
     // Request 5 clear and read STATUS
-    let resp4 = frame(READ_STAT);
-
+    let resp4 = frame(spi, cs, READ_STAT)?;
     // Response to request 5
-    let status = read(4);
+    let status = read(spi, cs)?;
 
     println!("status: {:?}", &status);
 
-    println!("SW TO BNK 0 : {:?}", &resp1);
-    if format!("{:X}", resp1[3]) != calculate_crc(&resp1) {
-        println!("checksum error resp1");
-    }
-    println!("SW RESET    : {:?}", &resp2);
-    if format!("{:X}", resp2[3]) != calculate_crc(&resp2) {
-        println!("checksum error resp2");
-    }
-    println!("MODE 1      : {:?}", resp3);
-    if format!("{:X}", resp3[3]) != calculate_crc(&resp3) {
-        println!("checksum error resp3");
-    }
-    println!("ANG CTRL    : {:?}", &resp4);
-    if format!("{:X}", resp4[3]) != calculate_crc(&resp4) {
-        println!("checksum error resp4");
-    }
-    println!("READ STAT   : {:?}", &status);
-    if format!("{:X}", status[3]) != calculate_crc(&status) {
-        println!("checksum error status");
-    }
+    // println!("SW TO BNK 0 : {:?}", &resp1);
+    // if resp1[3] != calculate_crc(&resp1) {
+    //     println!("checksum error resp1");
+    // }
+    // println!("SW RESET    : {:?}", &resp2);
+    // if resp2[3] != calculate_crc(&resp2) {
+    //     println!("checksum error resp2");
+    // }
+    // println!("MODE 1      : {:?}", resp3);
+    // if resp3[3] != calculate_crc(&resp3) {
+    //     println!("checksum error resp3");
+    // }
+    // println!("ANG CTRL    : {:?}", &resp4);
+    // if resp4[3] != calculate_crc(&resp4) {
+    //     println!("checksum error resp4");
+    // }
+    // println!("READ STAT   : {:?}", &status);
+    // if status[3] != calculate_crc(&status) {
+    //     println!("checksum error status");
+    // }
     sleep(Duration::from_millis(25));
     println!("*****start up sequence complete*****");
+
+    Ok(())
 }
 
-fn calculate_crc(data: u32) -> u8 {
+fn calculate_crc(data: &Vec<u8>) -> u8 {
     let mut crc: u8 = 0xFF;
-    for bit_index in (8..=31).rev() {
-        let bit_value = ((data >> bit_index) & 0x01) as u8;
-        crc = crc8(bit_value, crc);
+    for byte in data.iter() {
+        for bit_index in (0..=7).rev() {
+            let bit_value = ((byte >> bit_index) & 0x01) as u8;
+            crc = crc8(bit_value, crc);
+        }
     }
     !crc
 }
@@ -92,35 +119,42 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     crc
 }
 
+
 // Read bytes from the SPI device
-// arg: bytecount - number of bytes to read eg 4
 // return: vector of bytes read
-fn read(bytecount: usize) -> Vec<u8> {
+fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut ret = vec![0u8; 4]; // Create a new Vec<u8> to hold the read data
     cs.set_low();
-    let mut ret = vec![0; bytecount];
-    spi.read(&mut ret).unwarp();
+    spi.read(&mut ret)?;
     std::thread::sleep(std::time::Duration::from_millis(20));
     cs.set_high();
     std::thread::sleep(std::time::Duration::from_millis(15));
-    ret
+    println!("read: {:?}", &ret);
+    Ok(ret) // Return the owned Vec<u8>
+}
+
+fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
+    cs.set_low();
+    spi.write(data);
+    sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
+    cs.set_high();
+    sleep(Duration::from_millis(15));
 }
 
 // Performs write and read, the read will 
 // be response to previous request as per the protocol
-// arg: request - vector of bytes to write eg [0x00, 0x00, 0x00, 0x00]
-// arg: bytecount - number of bytes to read eg 4
-// return: vector of bytes read
-fn frame(request: &[u8], bytecount: usize) -> Vec<u8> {
+// arg: request -  bytes to write eg [0x00, 0x00, 0x00, 0x00]
+// return: bytes read
+fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     cs.set_low();
     spi.write(request);
-    let mut response = vec![0; bytecount];
-    spi.read(&mut response);
+    let mut response = [0u8; 4];
+    spi.read(&mut response)?;
     std::thread::sleep(std::time::Duration::from_millis(40));
     cs.set_high();
     std::thread::sleep(std::time::Duration::from_millis(5));
-    response
+    Ok(response.to_vec())
 }
-
 
 //
 
