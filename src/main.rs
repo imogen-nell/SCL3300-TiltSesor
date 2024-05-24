@@ -222,7 +222,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
         println!("checksum error");
         return None;
     }
-    println!("Data: [{}]", resp.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    //println!("Data: [{}]", resp.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
     let angle = anlge_conversion(resp);
     println!("{}: {} deg", key, angle);
@@ -307,18 +307,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     ///loooooooping angle readings
     loop {
         println!("********************");
-        match execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X") {
-            Some(angle) => {/*do nothing*/},
-            None => println!("Failed to execute angle command"),
-        }
-        match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
-            Some(angle) => {/*do nothing*/},
-            None => println!("Failed to execute angle command"),
-        }
-        match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
-            Some(angle) => {/*do nothing*/},
-            None => println!("Failed to execute angle command"),
-        }
+        execute_angles(&mut spi, &mut cs)
+        // match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
+        //     Some(angle) => {/*do nothing*/},
+        //     None => println!("Failed to execute angle command"),
+        // }
+        // match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
+        //     Some(angle) => {/*do nothing*/},
+        //     None => println!("Failed to execute angle command"),
+        // }
         println!("********************");
         // thread::sleep(Duration::from_secs(.5));
     }
