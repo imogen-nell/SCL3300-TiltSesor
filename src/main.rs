@@ -27,7 +27,7 @@ const DEV: u8 = 0;
 
 //Functions
 fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> {
-    println!("***** start up sequence *****");
+    println!("****** start up sequence ******");
     cs.set_high();
     spi.write(SW_TO_BNK0).unwrap();
 
@@ -134,13 +134,13 @@ fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>>
     Ok(ret) // Return the owned Vec<u8>
 }
 
-// fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
-//     cs.set_low();
-//     spi.write(data);
-//     sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
-//     cs.set_high();
-//     //sleep(Duration::from_millis(15));
-// }
+fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
+    cs.set_low();
+    spi.write(data);
+    sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
+    cs.set_high();
+    //sleep(Duration::from_millis(15));
+}
 
 // Performs write and read, the read will 
 // be response to previous request as per the protocol
@@ -196,6 +196,39 @@ fn execute_command(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &s
         println!("Data: [{}]", i_slice[1..3].iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
         println!("\n*************************\n");
     }
+}
+
+fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str) -> Option<f64> {
+    //write in previous frame to ensure no garbage values 
+    cs.set_low();
+    spi.write(command);
+    sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
+    cs.set_high();
+    ///
+    let hexnum = match frame(spi, cs, command) {
+        Ok(data) => data,
+        Err(_) => {
+            println!("Error: failed to get responce");
+            return None;
+        }
+    };
+    
+    if !key.contains("ANG_") {
+        println!("invalid command");
+        return None;
+    }
+    
+    if hexnum[3] as u8 != calculate_crc(bytes_to_u32(&hexnum)) {
+        println!("checksum error");
+        return None;
+    }
+    println!("Data: [{}]", hexnum.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    
+    let abs_hexnum = hexnum[0] as f64;
+    let angle = (abs_hexnum.abs() / 2_i16.pow(14) as f64) * 90.0;
+    println!("{}: {} deg", key, angle);
+    Some(angle.round() / 100.0)
+    
 }
 
 //
