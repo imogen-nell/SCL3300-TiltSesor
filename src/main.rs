@@ -217,7 +217,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     //finidh spi setup
 
     start_up(&mut spi, &mut cs)?;
-    
+    execute_command(&mut spi, &mut cs, WHOAMI, "WHOAMI");
     
     Ok(())
 }   
