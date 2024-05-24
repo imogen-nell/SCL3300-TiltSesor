@@ -250,5 +250,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     start_up(&mut spi, &mut cs)?;
     execute_command(&mut spi, &mut cs, WHOAMI, "WHOAMI");
     
+    //llooooooop
+    loop {
+        match execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X") {
+            Some(angle) => println!("angle: {}", angle),
+            None => println!("Failed to execute angle command"),
+        }
+
+        println!("********************");
+        thread::sleep(Duration::from_secs(1));
+    }
+
+
     Ok(())
 }   
