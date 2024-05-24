@@ -52,8 +52,8 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     let crc3 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp3)));
     let crc4 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp4)));
     let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&status)));
-    println!("resp1: {:?}", resp1);
-    println!("CRC1: {}", bytes_to_u32(&resp1));
+    // println!("resp1: {:?}", resp1);
+    // println!("CRC1: {}", bytes_to_u32(&resp1));
 
     if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -95,6 +95,7 @@ fn calculate_crc(data: u32) -> u8 {
     let mut crc: u8 = 0xFF;
     for bit_index in (8..=31).rev() {
         let bit_value = ((data >> bit_index) & 0x01) as u8;
+        println!("data:", data);
         crc = crc8(bit_value, crc);
     }
     !crc
