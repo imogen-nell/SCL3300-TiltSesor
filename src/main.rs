@@ -338,7 +338,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X");
         execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y");
         execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z");
-        sleep(Duration::from_millis(5));
+        sleep(Duration::from_millis(500));
 
         println!("********************");
         // thread::sleep(Duration::from_secs(.5));
