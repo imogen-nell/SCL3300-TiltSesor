@@ -292,8 +292,8 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
 fn anlge_conversion(data: Vec<u8>) -> f64 {
     let abs_val = i16::from_le_bytes([data[0], data[1]]) as f64;
     //println!("signed value: {}", abs_val);
-    let val_unsig = u16::from_le_bytes([data[0], data[1]]) as f64;
-    println!("unsigned angle: {}", (((val_unsig / 2_i16.pow(14) as f64) * 90.0) * 100.0).round()/100.0);
+    //let val_unsig = u16::from_le_bytes([data[0], data[1]]) as f64;
+    //println!("unsigned angle: {}", (((val_unsig / 2_i16.pow(14) as f64) * 90.0) * 100.0).round()/100.0);
     let angle = (((abs_val.abs() / 2_i16.pow(14) as f64) * 90.0) * 100.0).round() / 100.0;
     angle
 }
@@ -321,11 +321,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     //loooooooping angle readings
     loop {
         println!("********************");
-        //execute_angles(&mut spi, &mut cs);
-        match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
-            Some(angle) => {/*do nothing*/},
-            None => println!("Failed to execute angle command"),
-        }
+        execute_angles(&mut spi, &mut cs);
+        // match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
+        //     Some(angle) => {/*do nothing*/},
+        //     None => println!("Failed to execute angle command"),
+        // }
         // match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
         //     Some(angle) => {/*do nothing*/},
         //     None => println!("Failed to execute angle command"),
