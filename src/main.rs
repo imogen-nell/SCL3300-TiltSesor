@@ -266,24 +266,24 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     let y = frame(spi, cs, ANG_Z).unwrap();
     let z = read(spi, cs).unwrap();
 
-    sleep(Duration::from_millis(5));
+    // sleep(Duration::from_millis(5));
 
     //crc check
-    let crc_x = format!("{:02X}", calculate_crc(bytes_to_u32(&x.as_slice())));
-    let crc_y = format!("{:02X}", calculate_crc(bytes_to_u32(&y.as_slice())));
-    let crc_z = format!("{:02X}", calculate_crc(bytes_to_u32(&z.as_slice())));
-    if format!("{:02X}", x[3]) != crc_x {
-        println!("x checksum error");
-        return;
-    }
-    if format!("{:02X}", y[3]) != crc_y {
-        println!("y checksum error");
-        return;
-    }
-    if format!("{:02X}", z[3]) != crc_z {
-        println!("z checksum error");
-        return;
-    }
+    // let crc_x = format!("{:02X}", calculate_crc(bytes_to_u32(&x.as_slice())));
+    // let crc_y = format!("{:02X}", calculate_crc(bytes_to_u32(&y.as_slice())));
+    // let crc_z = format!("{:02X}", calculate_crc(bytes_to_u32(&z.as_slice())));
+    // if format!("{:02X}", x[3]) != crc_x {
+    //     println!("x checksum error");
+    //     return;
+    // }
+    // if format!("{:02X}", y[3]) != crc_y {
+    //     println!("y checksum error");
+    //     return;
+    // }
+    // if format!("{:02X}", z[3]) != crc_z {
+    //     println!("z checksum error");
+    //     return;
+    // }
     
     println!("X : {} deg", unsigned_anlge_conversion(x));   
     println!("Y : {} deg", unsigned_anlge_conversion(y));
@@ -330,8 +330,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     //loooooooping angle readings
     loop {
         println!("********************");
-        //execute_angles(&mut spi, &mut cs);
-        execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z");
+        execute_angles(&mut spi, &mut cs);
+        // execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X");
         sleep(Duration::from_millis(5));
 
         println!("********************");
