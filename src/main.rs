@@ -163,7 +163,6 @@ fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>
     spi.read(&mut response)?;
     std::thread::sleep(std::time::Duration::from_millis(40));
     cs.set_high();
-    //std::thread::sleep(std::time::Duration::from_millis(5));
     Ok(response.to_vec())
 }
 // Separates the OP code into RW, ADDR, RS and prints them on the screen
@@ -244,7 +243,7 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     //write in previous frame to ensure no garbage values 
     cs.set_low();
     spi.write(ANG_X);
-    sleep(Duration::from_millis(11)); // Must give it at least 10ms to process
+    sleep(Duration::from_millis(15)); // Must give it at least 10ms to process
     cs.set_high();
     //
 
