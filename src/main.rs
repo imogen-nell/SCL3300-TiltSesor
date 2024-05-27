@@ -29,13 +29,22 @@ const DEV: u8 = 0;
 fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> {
     println!("****** start up sequence ******");
     cs.set_high();
+    sleep(duration::from_millis(15));
+    cs.set_low();
     spi.write(SW_TO_BNK0).unwrap();
+    sleep(Duration::from_millis(15));
+    cs.set_high();
 
+    let resp = frame(spi, cs, WAKE_UP)?;
+    sleep(duration::from_millis(1));
     let resp1 = frame(spi, cs, SW_RESET)?;
+    sleep(duration::from_millis(1));
     let resp2 = frame(spi, cs, MODE_1)?;
     let resp3 = frame(spi, cs, ANG_CTRL)?;
+    sleep(duration::from_millis(25));
     let resp4 = frame(spi, cs, READ_STAT)?;
-    let status = read(spi, cs)?;
+    let resp5 = frame(spi, cs, READ_STAT)?;
+    let status = frame(spi, cs, s\READ_STAT)?;
 
     //println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
    // println!("Data type of resp1[3]: {:?}", std::any::type_name_of_val(&resp1[3]));
