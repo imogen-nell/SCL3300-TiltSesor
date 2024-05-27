@@ -264,7 +264,9 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     ///discard initial request and read the response
     let x = frame(spi, cs, ANG_Y).unwrap();
     write(spi, cs, ANG_Y);
+    sleep(Duration::from_millis(5));
     let y = frame(spi, cs, ANG_Z).unwrap();
+    sleep(Duration::from_millis(5));
     write(spi, cs, ANG_Z);
     let z = read(spi, cs).unwrap();
 
