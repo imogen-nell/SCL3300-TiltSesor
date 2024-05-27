@@ -250,7 +250,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     }
     
     let angle = signed_anlge_conversion(resp);
-    println!("{}: {} deg", key, angle);
+    // println!("{}: {} deg", key, angle);
     Some(angle)
     
 }
@@ -335,10 +335,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         println!("********************");
         // execute_angles(&mut spi, &mut cs);
-        execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X");
-        execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y");
-        execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z");
-        sleep(Duration::from_millis(500));
+        let x = execute_angle(&mut spi, &mut cs, ANG_X, "ANG_X");
+        let y = execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y");
+        let z = execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z");
+        println!("{}: {} deg", "ANG_X", x.unwrap());
+        println!("{}: {} deg", "ANG_Y", y.unwrap());
+        println!("{}: {} deg", "ANG_Z", z.unwrap());
+        //sleep(Duration::from_millis(500));
 
         println!("********************");
         // thread::sleep(Duration::from_secs(.5));
