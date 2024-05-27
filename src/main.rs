@@ -25,17 +25,19 @@ const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
 const BUS: u8 = 1;
 const DEV: u8 = 0;
 
-//Functions
+///#Methods
 fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> {
     println!("****** start up sequence ******");
     cs.set_high();
     sleep(Duration::from_millis(15));
+    ///Initial request
+    ///No data can be read in this frame
     cs.set_low();
-    spi.write(SW_TO_BNK0).unwrap();
+    spi.write(WAKE_UP).unwrap();
     sleep(Duration::from_millis(15));
     cs.set_high();
-
-    let resp = frame(spi, cs, WAKE_UP)?;
+    ///Start-up Sequence
+    let resp = frame(spi, cs, SW_TO_BNK0)?;
     sleep(Duration::from_millis(1));
     let resp1 = frame(spi, cs, SW_RESET)?;
     sleep(Duration::from_millis(1));
@@ -44,25 +46,20 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     sleep(Duration::from_millis(25));
     let resp4 = frame(spi, cs, READ_STAT)?;
     let resp5 = frame(spi, cs, READ_STAT)?;
-    // execute_command(spi, cs, READ_STAT, "READ_STAT");
-    let status = read(spi, cs)?;
-    //println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-   // println!("Data type of resp1[3]: {:?}", std::any::type_name_of_val(&resp1[3]));
 
+    ///Print Startu-up sequence results
     println!("SW_toBNK0 : [{}]", resp1.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-
     println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-    println!("READ STAT : [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+    println!("READ STAT : [{}]", resp5.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
 
+    ///Checksum Calculations to enure startup was successful
     let crc1 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp1)));
     let crc2 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp2)));
     let crc3 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp3)));
     let crc4 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp4)));
     let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&status)));
-    // println!("resp1: {:?}", resp1);
-    // println!("CRC1: {}", bytes_to_u32(&resp1));
 
     if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -100,6 +97,9 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
+///Calcylates checksum for given data bytes
+/// Argument data: 32-bit / 4-byte data read from sensor
+/// Returns: 8-bit checksum
 fn calculate_crc(data: u32) -> u8 {
     let mut crc: u8 = 0xFF;
     for bit_index in (8..=31).rev() {
@@ -109,6 +109,7 @@ fn calculate_crc(data: u32) -> u8 {
     !crc
 }
 
+///Fucntion used by calcualte_crc()
 fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     let mut temp = crc & 0x80;
     if bit_value == 0x01 {
@@ -121,6 +122,7 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     crc
 }
 
+///Converts a slice of bytes to a 32-bit unsigned integer
 fn bytes_to_u32(data: &[u8]) -> u32 {
     let mut result: u32 = 0;
     for &byte in data {
@@ -130,38 +132,49 @@ fn bytes_to_u32(data: &[u8]) -> u32 {
     result
 }
 
-// Read bytes from the SPI device
-// return: vector of bytes read
+///Converts a slice of bytes to a 32-bit signed integer
+fn bytes_to_i32(data: &[u8]) -> i32 {
+    let mut result: i32 = 0;
+    for &byte in data {
+        result <<= 8; // Shift the current value left by 8 bits
+        result |= byte as i32; // Bitwise OR operation to append the byte to the result
+    }
+    result
+}
+
+/// Read bytes from the SPI device in one frame without writing to the device
+/// return: vector of bytes read
 fn read(spi: &mut Spidev, cs: &mut OutputPin) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut ret = vec![0u8; 4]; // Create a new Vec<u8> to hold the read data
     cs.set_low();
     spi.read(&mut ret)?;
     std::thread::sleep(std::time::Duration::from_millis(20));
     cs.set_high();
-   // std::thread::sleep(std::time::Duration::from_millis(15));
     //println!("read: [{}]", ret.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     Ok(ret) // Return the owned Vec<u8>
 }
 
+/// Write bytes to the SPI device in one frame without reading from the device
+/// Argument:data - bytes to write
 fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
     cs.set_low();
     spi.write(data);
-    sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
+    sleep(Duration::from_millis(15)); // Must give it at least 10ms to process
     cs.set_high();
-    //sleep(Duration::from_millis(15));
 }
 
 
 // Performs write and read, the read will 
 // be response to previous request as per the protocol
 // arg: request -  bytes to write eg [0x00, 0x00, 0x00, 0x00]
-// return: bytes read
+// return: bytes read from the device 
 fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     cs.set_low();
     spi.write(request);
+    sleep(Duration::from_millis(10));
     let mut response = [0u8; 4];
     spi.read(&mut response)?;
-    std::thread::sleep(std::time::Duration::from_millis(40));
+    sleep(Duration::from_millis(10));
     cs.set_high();
     Ok(response.to_vec())
 }
@@ -207,6 +220,10 @@ fn execute_command(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &s
     }
 }
 
+///Excecutes angle-reading commands and prints the angle
+/// Argument spi: command : ANG_X, ANG_Y, ANG_Z
+/// Argument key: string to print the command name e.g., "ANG_X"
+/// Returns: angle in degrees
 fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str) -> Option<f64> {
     //write in previous frame to ensure no garbage values 
     cs.set_low();
@@ -231,7 +248,6 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
         println!("checksum error");
         return None;
     }
-    //println!("Data: [{}]", resp.iter().map(|&b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
     let angle = anlge_conversion(resp);
     println!("{}: {} deg", key, angle);
@@ -239,37 +255,20 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
     
 }
 
+///Executes all angle-reading commands and prints all 3 angle readings 
 fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     //write in previous frame to ensure no garbage values 
-    cs.set_low();
-    spi.write(ANG_X);
-    sleep(Duration::from_millis(15)); // Must give it at least 10ms to process
-    cs.set_high();
-    //
+    write(spi, cs, ANG_X);
+    sleep(Duration::from_millis(5));
+    
+    ///discard initial request and read the response
+    let x = frame(spi, cs, ANG_Y)?;
+    let y = frame(spi, cs, ANG_Z)?;
+    let z = read(spi, cs)?;
 
-    let x = match frame(spi, cs, ANG_Y) {
-        Ok(data) => data,
-        Err(_) => {
-            println!("Error: failed to get responce");
-            return;
-        }
-    };
-    let y = match frame(spi, cs, ANG_Z) {
-        Ok(data) => data,
-        Err(_) => {
-            println!("Error: failed to get responce");
-            return;
-        }
-    };
-    let z = match read(spi, cs) {
-        Ok(data) => data,
-        Err(_) => {
-            println!("Error: failed to get responce");
-            return;
-        }
-    };
+    sleep(Duration::from_millis(5));
 
-    //crc check
+    ///crc check
     if x[3] as u8 != calculate_crc(bytes_to_u32(&x)) {
         println!("x checksum error");
         return;
@@ -288,17 +287,23 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     println!("Z : {} deg", anlge_conversion(z)); 
 }
 
-fn anlge_conversion(data: Vec<u8>) -> f64 {
-    //signed
-    //let abs_val = i16::from_le_bytes([data[0], data[1]]) as f64;
-    //println!("signed value: {}", abs_val);
-    //unsined
-    let abs_val = u16::from_le_bytes([data[0], data[1]]) as f64;
-    //println!("unsigned angle: {}", (((val_unsig / 2_i16.pow(14) as f64) * 90.0) * 100.0).round()/100.0);
+///Converts the data read to an angle in degrees readding the data as a signed int 
+/// Argument data: 4-byte vector read from the sensor
+/// Returns: angle in degrees
+fn signed_anlge_conversion(data: Vec<u8>) -> f64 {
+    let abs_val = i16::from_le_bytes([data[0], data[1]]) as f64;
     let angle = (((abs_val.abs() / 2_i16.pow(14) as f64) * 90.0) * 100.0).round() / 100.0;
     angle
 }
 
+///Converts the data read to an angle in degrees readding the data as an unsigned int
+/// Argument data: 4-byte vector read from the sensor
+/// Returns: angle in degrees
+fn unsigned_anlge_conversion(data: Vec<u8>) -> f64 {
+    let val_unsig = u16::from_le_bytes([data[0], data[1]]) as f64;
+    let angle = (((val_unsig / 2_i16.pow(14) as f64) * 90.0) * 100.0).round() / 100.0;
+    angle
+}
 //
 
 fn main() -> Result<(), Box<dyn Error>> {
