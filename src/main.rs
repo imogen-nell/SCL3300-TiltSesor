@@ -282,9 +282,9 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
         return;
     }       
     
-    println!("X : {} deg", anlge_conversion(x));   
-    println!("Y : {} deg", anlge_conversion(y));
-    println!("Z : {} deg", anlge_conversion(z)); 
+    println!("X : {} deg", unsigned_anlge_conversion(x));   
+    println!("Y : {} deg", unsigned_anlge_conversion(y));
+    println!("Z : {} deg", unsigned_anlge_conversion(z)); 
 }
 
 ///Converts the data read to an angle in degrees readding the data as a signed int 
@@ -327,15 +327,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     //loooooooping angle readings
     loop {
         println!("********************");
-        // execute_angles(&mut spi, &mut cs);
-        match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
-            Some(angle) => {/*do nothing*/},
-            None => println!("Failed to execute angle command"),
-        }
-        // match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
-        //     Some(angle) => {/*do nothing*/},
-        //     None => println!("Failed to execute angle command"),
-        // }
+        execute_angles(&mut spi, &mut cs);
+        // execute_angles(&mut spi, &mut cs, ANG_Z, "ANG_Z")?;
+
         println!("********************");
         // thread::sleep(Duration::from_secs(.5));
     }
