@@ -249,7 +249,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
         return None;
     }
     
-    let angle = signed_anlge_conversion(resp);
+    let angle = unsigned_anlge_conversion(resp);
     // println!("{}: {} deg", key, angle);
     Some(angle)
     
@@ -289,9 +289,9 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     //     return;
     // }
     
-    println!("X : {} deg", unsigned_anlge_conversion(x));   
-    println!("Y : {} deg", unsigned_anlge_conversion(y));
-    println!("Z : {} deg", unsigned_anlge_conversion(z)); 
+    println!("X : {} deg", signed_anlge_conversion(x));   
+    println!("Y : {} deg", signed_anlge_conversion(y));
+    println!("Z : {} deg", signed_anlge_conversion(z)); 
 }
 
 ///Converts the data read to an angle in degrees readding the data as a signed int 
