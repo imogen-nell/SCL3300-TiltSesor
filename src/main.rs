@@ -322,11 +322,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     //loooooooping angle readings
     loop {
         println!("********************");
-        execute_angles(&mut spi, &mut cs);
-        // match execute_angle(&mut spi, &mut cs, ANG_Y, "ANG_Y") {
-        //     Some(angle) => {/*do nothing*/},
-        //     None => println!("Failed to execute angle command"),
-        // }
+        // execute_angles(&mut spi, &mut cs);
+        match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
+            Some(angle) => {/*do nothing*/},
+            None => println!("Failed to execute angle command"),
+        }
         // match execute_angle(&mut spi, &mut cs, ANG_Z, "ANG_Z") {
         //     Some(angle) => {/*do nothing*/},
         //     None => println!("Failed to execute angle command"),
