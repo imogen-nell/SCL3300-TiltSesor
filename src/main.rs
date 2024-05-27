@@ -43,7 +43,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     let resp3 = frame(spi, cs, ANG_CTRL)?;
     sleep(Duration::from_millis(25));
     let resp4 = frame(spi, cs, READ_STAT)?;
-    let resp5 = frame(spi, cs, READ_STAT)?;
+    //let resp5 = frame(spi, cs, READ_STAT)?;
     execute_command(spi, cs, READ_STAT, "READ_STAT");
     let status = read(spi, cs)?;
     //println!("Status: [{}]", status.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
