@@ -59,7 +59,7 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
     let crc2 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp2)));
     let crc3 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp3)));
     let crc4 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp4)));
-    let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&status)));
+    let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp5)));
 
     if format!("{:02X}", resp1[3]) != crc1 {
         println!("SW_TO_BNK_0 Checksum error:");
@@ -85,9 +85,9 @@ fn start_up(spi: &mut Spidev, cs: &mut OutputPin) -> Result<(), Box<dyn Error>> 
         println!("calculated CRC: {}", crc4);
     }
 
-    if format!("{:02X}", status[3]) != crc5 {
+    if format!("{:02X}", resp5[3]) != crc5 {
         println!("Status Checksum error:");
-        println!("status[3]: {}", format!("{:02X}", status[3]));
+        println!("status[3]: {}", format!("{:02X}", resp5[3]));
         println!("calculated CRC: {}", crc5);
     }
 
@@ -170,13 +170,13 @@ fn write(spi: &mut Spidev, cs: &mut OutputPin, data: &[u8]) {
 // return: bytes read from the device 
 fn frame(spi: &mut Spidev, cs: &mut OutputPin, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     cs.set_low();
-    spi.write(request);
+    spi.write(request)?;
     sleep(Duration::from_millis(10));
-    let mut response = [0u8; 4];
+    let mut response = vec![0u8; 4];
     spi.read(&mut response)?;
     sleep(Duration::from_millis(10));
     cs.set_high();
-    Ok(response.to_vec())
+    Ok(response)
 }
 // Separates the OP code into RW, ADDR, RS and prints them on the screen
 // Used by execute_command()
@@ -249,7 +249,7 @@ fn execute_angle(spi: &mut Spidev, cs: &mut OutputPin, command: &[u8], key: &str
         return None;
     }
     
-    let angle = anlge_conversion(resp);
+    let angle = signed_anlge_conversion(resp);
     println!("{}: {} deg", key, angle);
     Some(angle)
     
@@ -262,25 +262,28 @@ fn execute_angles(spi: &mut Spidev, cs: &mut OutputPin){
     sleep(Duration::from_millis(5));
     
     ///discard initial request and read the response
-    let x = frame(spi, cs, ANG_Y)?;
-    let y = frame(spi, cs, ANG_Z)?;
-    let z = read(spi, cs)?;
+    let x = frame(spi, cs, ANG_Y).unwrap();
+    let y = frame(spi, cs, ANG_Z).unwrap();
+    let z = read(spi, cs).unwrap();
 
     sleep(Duration::from_millis(5));
 
-    ///crc check
-    if x[3] as u8 != calculate_crc(bytes_to_u32(&x)) {
+    //crc check
+    let crc_x = format!("{:02X}", calculate_crc(bytes_to_u32(&x.as_slice())));
+    let crc_y = format!("{:02X}", calculate_crc(bytes_to_u32(&y.as_slice())));
+    let crc_z = format!("{:02X}", calculate_crc(bytes_to_u32(&z.as_slice())));
+    if format!("{:02X}", x[3]) != crc_x {
         println!("x checksum error");
         return;
     }
-    if y[3] as u8 != calculate_crc(bytes_to_u32(&y)) {
-        println!("cy hecksum error");
+    if format!("{:02X}", y[3]) != crc_y {
+        println!("y checksum error");
         return;
     }
-    if z[3] as u8 != calculate_crc(bytes_to_u32(&z)) {
+    if format!("{:02X}", z[3]) != crc_z {
         println!("z checksum error");
         return;
-    }       
+    }
     
     println!("X : {} deg", unsigned_anlge_conversion(x));   
     println!("Y : {} deg", unsigned_anlge_conversion(y));
