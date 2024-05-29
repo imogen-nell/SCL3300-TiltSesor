@@ -19,6 +19,16 @@ pub struct TiltSensor {
     Z_ANG: f64,
 }
 
+fn main() {
+    let ts = TiltSensor::new(...);
+    let thread = ts.spawn_to_thread()?;
+    if let Some(data) = thread.try_iter() {
+        let newest = data.last()
+    }
+
+    let x = [1,2,3];
+}
+
 //Default implementation for TiltSensor
 impl TiltSensor {
     const SW_RESET: &[u8] = &[0xB4, 0x00, 0x20, 0x98];
@@ -44,6 +54,21 @@ impl TiltSensor {
         ts.start_up();
         println!("Tilt Sensor initialized");
         ts
+    }
+    pub fn spawn_to_thread(self) -> Result<DualChannelSync<Cmd, [f64; 3]>> {
+        DualChannelSync::init(
+            "Tilt Sensor",
+            Some(move |to_main: ..., from_main: ...| {
+                self.start_up();
+                loop {
+                    self.update_angles();
+                    let data: [f64; 3] = [self.X_ANG, self.Y_ANG, self.Z_ANG];
+                    to_main.send(data);
+                    std::thread::sleep_ms(100);
+                }
+
+            }),
+        );
     }
 
     fn start_up(&mut self)-> Result<(), Box<dyn Error>> {
