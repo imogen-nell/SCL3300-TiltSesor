@@ -8,8 +8,11 @@ use rppal::gpio::{Gpio, OutputPin};
 use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
 use std::thread;
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::channel;
 use std::sync::MutexGuard;
+use log::{info, warn, error};
+
+use cadh::threadsync::DualChannelSync;
+
 
 pub struct TiltSensor {
     spi: Spidev,
@@ -32,7 +35,6 @@ impl TiltSensor {
     const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
     const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
 
-    //TODO: decide where to confgure cs(outside)
     pub fn new(spi: Spidev, cs: OutputPin) -> Self {
         let mut ts = TiltSensor {
             spi,
@@ -42,13 +44,13 @@ impl TiltSensor {
             Z_ANG: 0.0,
         };
         ts.start_up();
-        println!("Tilt Sensor initialized");
+        log::info!("Tilt Sensor initialized");
         ts
     }
 
     fn start_up(&mut self)-> Result<(), Box<dyn Error>> {
         // Initialize the sensor
-        println!("****** start up sequence ******");
+        log::info!("****** start up sequence ******");
         self.cs.set_high();
         sleep(Duration::from_millis(15));
         ///Initial request
@@ -59,7 +61,7 @@ impl TiltSensor {
         sleep(Duration::from_millis(15));
         self.cs.set_high();
         ///Start-up Sequence
-        let resp = self.frame(Self::SW_TO_BNK0);
+        let _resp = self.frame(Self::SW_TO_BNK0);
         sleep(Duration::from_millis(1));
         let resp1 = self.frame(Self::SW_RESET)?;
         sleep(Duration::from_millis(1));
@@ -71,11 +73,11 @@ impl TiltSensor {
         let whoami = self.frame(Self::WHOAMI);
     
         ///Print Startu-up sequence results
-        println!("SW_toBNK0 : [{}]", resp1.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        println!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        println!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        println!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        println!("READ STAT : [{}]", resp5.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        log::info!("SW_toBNK0 : [{}]", resp1.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        log::info!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        log::info!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        log::info!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
+        log::info!("READ STAT : [{}]", resp5.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
     
         // ///Checksum Calculations to enure startup was successful
         let crc1 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp1)));
@@ -85,38 +87,38 @@ impl TiltSensor {
         let crc5 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp5)));
 
         if format!("{:02X}", resp1[3]) != crc1 {
-            println!("SW_TO_BNK_0 Checksum error:");
-            println!("resp1[3]: {}", format!("{:02X}", resp1[3]));
-            println!("calculated CRC: {}", crc1);
+            log::warn!("SW_TO_BNK_0 Checksum error:");
+            log::info!("resp1[3]: {}", format!("{:02X}", resp1[3]));
+            log::info!("calculated CRC: {}", crc1);
         }
         if format!("{:02X}", resp2[3]) != crc2 {
-            println!("SW_RESET Checksum error:");
-            println!("resp1[3]: {}", format!("{:02X}", resp2[3]));
-            println!("calculated CRC: {}", crc2);
+            log::warn!("SW_RESET Checksum error:");
+            log::info!("resp1[3]: {}", format!("{:02X}", resp2[3]));
+            log::info!("calculated CRC: {}", crc2);
         }
         if format!("{:02X}", resp3[3]) != crc3 {
-            println!("MODE_1 Checksum error:");
-            println!("resp1[3]: {}", format!("{:02X}", resp3[3]));
-            println!("calculated CRC: {}", crc3);
+            log::warn!("MODE_1 Checksum error:");
+            log::info!("resp1[3]: {}", format!("{:02X}", resp3[3]));
+            log::info!("calculated CRC: {}", crc3);
         }
         if format!("{:02X}", resp4[3]) != crc4 {
-            println!("ANG_CTRL Checksum error:");
-            println!("resp1[3]: {}", format!("{:02X}", resp4[3]));
-            println!("calculated CRC: {}", crc4);
+            log::warn!("ANG_CTRL Checksum error:");
+            log::info!("resp1[3]: {}", format!("{:02X}", resp4[3]));
+            log::info!("calculated CRC: {}", crc4);
         }
         if format!("{:02X}", resp5[3]) != crc5 {
-            println!("READ_STAT Checksum error:");
-            println!("resp1[3]: {}", format!("{:02X}", resp5[3]));
-            println!("calculated CRC: {}", crc5);
+            log::warn!("READ_STAT Checksum error:");
+            log::info!("resp1[3]: {}", format!("{:02X}", resp5[3]));
+            log::info!("calculated CRC: {}", crc5);
         }
     
         sleep(Duration::from_millis(25));
-        println!("*****start up sequence complete*****");
+        log::info!("*****start up sequence complete*****");
         
         let data = match whoami {
             Ok(data) => data,
             Err(err) => {
-                eprintln!("Error: {:?}", err);
+                log::error!("Error: {:?}", err);
                 return Err(err.into());
             }
         };
@@ -126,31 +128,57 @@ impl TiltSensor {
         let rs = (num & 0b11) as u8;
         let crc = format!("{:02X}", calculate_crc(bytes_to_u32(slice)));
         if crc != format!("{:02X}", slice[3]) {
-            println!("Error: Checksum error");
+            log::warn!("Error: Checksum error");
         }
         if rs != 1 {
-            println!("Error: Startup Sequence failed");
+            log::error!("Error: Startup Sequence failed");
         }
         Ok(())
     }
 
+    pub fn spawn_to_thread(mut self) -> Result<DualChannelSync<[u8;4], [f64; 3]>, Box<dyn Error>> {
+        DualChannelSync::spawn(
+            "Tilt Sensor",
+            move |to_main: crossbeam::channel::Sender<[f64; 3]>, from_main: crossbeam::channel::Receiver<[u8;4]>| {
+                self.start_up();
+                log::info!("Thread started!");
+                loop {
+                    self.update_angles();
+                    let data: [f64; 3] = [self.X_ANG, self.Y_ANG, self.Z_ANG];
+                    
+                    //TODO: put a match statement to send data to main thread
+                    if let Err(e) = to_main.send(data) {
+                        log::warn!("failed to send data: {}", e);
+                    }
+
+                    //to_main.send(data);
+                    std::thread::sleep_ms(100);
+                }
+
+            })
+    }
 
     pub fn read_x(&mut self) -> f64 {
         // Read the x-axis value
-        self.update_angles();
+       // self.update_angles();
         self.X_ANG
     }
 
     pub fn read_y(&mut self) -> f64 {
         // Read the y-axis value
-        self.update_angles();
+        //elf.update_angles();
         self.Y_ANG
     }
 
     pub fn read_z(&mut self) -> f64 {
         // Read the z-axis value
-        self.update_angles();
+        //self.update_angles();
         self.Z_ANG
+    }
+
+    pub fn read_all(&mut self) -> [f64; 3] {
+        // Read all the angles
+        [self.X_ANG, self.Y_ANG, self.Z_ANG]
     }
 
     fn update_angles(&mut self) {
@@ -176,13 +204,13 @@ impl TiltSensor {
         let resp = match self.frame(command) {
             Ok(data) => data,
             Err(_) => {
-                println!("Error: failed to get responce");
+                log::error!("Error: failed to get responce");
                 return None;
             }
         };
         
         if resp[3] as u8 != calculate_crc(bytes_to_u32(&resp)) {
-            println!("checksum error");
+            log::warn!("checksum error");
             return None;
         }
 
