@@ -1,25 +1,18 @@
-use std::io::{Write, Read};
+use rppal::gpio::OutputPin;
+use spidev::Spidev;
 use std::error::Error;
-use std::str;
-use std::borrow::Cow;
-use std::time::Duration;
+use std::io::{Read, Write};
 use std::thread::sleep;
-use rppal::gpio::{Gpio, OutputPin};
-use spidev::{Spidev, SpidevOptions, SpidevTransfer, SpiModeFlags};
-use std::thread;
-use std::sync::{Arc, Mutex};
-use std::sync::MutexGuard;
-use log::{info, warn, error};
+use std::time::Duration;
 
 use cadh::threadsync::DualChannelSync;
-
 
 pub struct TiltSensor {
     spi: Spidev,
     cs: OutputPin,
-    X_ANG: f64,
-    Y_ANG: f64,
-    Z_ANG: f64,
+    x_ang: f64,
+    y_ang: f64,
+    z_ang: f64,
 }
 
 //Default implementation for TiltSensor
@@ -35,32 +28,32 @@ impl TiltSensor {
     const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
     const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
 
-    pub fn new(spi: Spidev, cs: OutputPin) -> Self {
+    pub fn new(spi: Spidev, cs: OutputPin) -> Result<Self, Box<dyn Error>> {
         let mut ts = TiltSensor {
             spi,
             cs,
-            X_ANG: 0.0,
-            Y_ANG: 0.0,
-            Z_ANG: 0.0,
+            x_ang: 0.0,
+            y_ang: 0.0,
+            z_ang: 0.0,
         };
-        ts.start_up();
+        ts.start_up()?;
         log::info!("Tilt Sensor initialized");
-        ts
+        Ok(ts)
     }
 
-    fn start_up(&mut self)-> Result<(), Box<dyn Error>> {
+    fn start_up(&mut self) -> Result<(), Box<dyn Error>> {
         // Initialize the sensor
         log::info!("****** start up sequence ******");
         self.cs.set_high();
         sleep(Duration::from_millis(15));
-        ///Initial request
-        ///No data can be read in this frame
+        //Initial request
+        //No data can be read in this frame
         self.cs.set_low();
         self.spi.write(Self::WAKE_UP).unwrap();
         self.cs.set_low();
         sleep(Duration::from_millis(15));
         self.cs.set_high();
-        ///Start-up Sequence
+        //Start-up Sequence
         let _resp = self.frame(Self::SW_TO_BNK0);
         sleep(Duration::from_millis(1));
         let resp1 = self.frame(Self::SW_RESET)?;
@@ -71,14 +64,49 @@ impl TiltSensor {
         let resp4 = self.frame(Self::READ_STAT)?;
         let resp5 = self.frame(Self::WHOAMI)?;
         let whoami = self.frame(Self::WHOAMI);
-    
-        ///Print Startu-up sequence results
-        log::info!("SW_toBNK0 : [{}]", resp1.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        log::info!("SW RESET  : [{}]", resp2.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        log::info!("MODE 1    : [{}]", resp3.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        log::info!("ANG CTRL  : [{}]", resp4.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-        log::info!("READ STAT : [{}]", resp5.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(", "));
-    
+
+        //Print Startu-up sequence results
+        log::info!(
+            "SW_toBNK0 : [{}]",
+            resp1
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        log::info!(
+            "SW RESET  : [{}]",
+            resp2
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        log::info!(
+            "MODE 1    : [{}]",
+            resp3
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        log::info!(
+            "ANG CTRL  : [{}]",
+            resp4
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        log::info!(
+            "READ STAT : [{}]",
+            resp5
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+
         // ///Checksum Calculations to enure startup was successful
         let crc1 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp1)));
         let crc2 = format!("{:02X}", calculate_crc(bytes_to_u32(&resp2)));
@@ -111,10 +139,10 @@ impl TiltSensor {
             log::info!("resp1[3]: {}", format!("{:02X}", resp5[3]));
             log::info!("calculated CRC: {}", crc5);
         }
-    
+
         sleep(Duration::from_millis(25));
         log::info!("*****start up sequence complete*****");
-        
+
         let data = match whoami {
             Ok(data) => data,
             Err(err) => {
@@ -123,7 +151,7 @@ impl TiltSensor {
             }
         };
         let slice = data.as_slice();
-        
+
         let num = i64::from_str_radix(&format!("{:X}", slice[0]), 16).unwrap();
         let rs = (num & 0b11) as u8;
         let crc = format!("{:02X}", calculate_crc(bytes_to_u32(slice)));
@@ -136,93 +164,96 @@ impl TiltSensor {
         Ok(())
     }
 
-    pub fn spawn_to_thread(mut self) -> Result<DualChannelSync<[u8;4], [f64; 3]>, Box<dyn Error>> {
-        DualChannelSync::spawn(
-            "Tilt Sensor",
-            move |to_main: crossbeam::channel::Sender<[f64; 3]>, from_main: crossbeam::channel::Receiver<[u8;4]>| {
-                self.start_up();
-                log::info!("Thread started!");
+    pub fn spawn_to_thread(mut self) -> Result<DualChannelSync<[u8; 4], [f64; 3]>, Box<dyn Error>> {
+        DualChannelSync::spawn("Tilt Sensor", move |to_main: _, _from_main: _| {
+            loop {
+                // This is the startup loop
+                while let Err(e) = self.start_up() {
+                    log::error!("Failed tilt startup: {}", e);
+                    sleep(Duration::from_millis(2000));
+                }
+                log::info!("Tilt thread started!");
                 loop {
-                    self.update_angles();
-                    let data: [f64; 3] = [self.X_ANG, self.Y_ANG, self.Z_ANG];
-                    
+                    // This is the read loop
+                    if let Err(e) = self.update_angles() {
+                        // Break out of read loop and redo init
+                        log::error!("update_angles failed: {}", e);
+                        break;
+                    }
+                    let data: [f64; 3] = [self.x_ang, self.y_ang, self.z_ang];
+
                     //TODO: put a match statement to send data to main thread
                     if let Err(e) = to_main.send(data) {
                         log::warn!("failed to send data: {}", e);
                     }
 
                     //to_main.send(data);
-                    std::thread::sleep_ms(100);
+                    sleep(Duration::from_millis(100));
                 }
-
-            })
+                log::error!("Read loop failed: restarting...");
+            }
+        })
     }
 
     pub fn read_x(&mut self) -> f64 {
         // Read the x-axis value
-       // self.update_angles();
-        self.X_ANG
+        // self.update_angles();
+        self.x_ang
     }
 
     pub fn read_y(&mut self) -> f64 {
         // Read the y-axis value
         //elf.update_angles();
-        self.Y_ANG
+        self.y_ang
     }
 
     pub fn read_z(&mut self) -> f64 {
         // Read the z-axis value
         //self.update_angles();
-        self.Z_ANG
+        self.z_ang
     }
 
     pub fn read_all(&mut self) -> [f64; 3] {
         // Read all the angles
-        [self.X_ANG, self.Y_ANG, self.Z_ANG]
+        [self.x_ang, self.y_ang, self.z_ang]
     }
 
-    fn update_angles(&mut self) {
+    fn update_angles(&mut self) -> Result<(), Box<dyn Error>> {
         // Update all the angles
-        let x = self.execute_angle(Self::ANG_X);
-        let y = self.execute_angle(Self::ANG_Y);
-        let z = self.execute_angle(Self::ANG_Z);
-        self.X_ANG = x.unwrap();
-        self.Y_ANG = y.unwrap();
-        self.Z_ANG = z.unwrap();
+        let x = self.execute_angle(Self::ANG_X)?;
+        let y = self.execute_angle(Self::ANG_Y)?;
+        let z = self.execute_angle(Self::ANG_Z)?;
+        self.x_ang = x;
+        self.y_ang = y;
+        self.z_ang = z;
+
+        Ok(())
     }
 
     ///Excecutes an angle command, returns the angle read
     ///Argument command: 4-byte command to write to the sensor: ANG_X, ANG_Y, or ANG_Z
     ///Returns: angle in degrees from -90 to 90
-    fn execute_angle(&mut self, command: &[u8]) -> Option<f64> {
-        //write in previous frame to ensure no garbage values 
+    fn execute_angle(&mut self, command: &[u8]) -> Result<f64, Box<dyn Error>> {
+        //write in previous frame to ensure no garbage values
         self.cs.set_low();
-        self.spi.write(command);
+        self.spi.write(command)?;
         sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
         self.cs.set_high();
-        
-        let resp = match self.frame(command) {
-            Ok(data) => data,
-            Err(_) => {
-                log::error!("Error: failed to get responce");
-                return None;
-            }
-        };
-        
+
+        let resp = self.frame(command)?;
+
         if resp[3] as u8 != calculate_crc(bytes_to_u32(&resp)) {
-            log::warn!("checksum error");
-            return None;
+            return Err(From::from("checksum error"));
         }
 
         let angle = angle_conversion(resp);
-        Some(angle)
-        
+        Ok(angle)
     }
 
-    /// Performs write and read, the data read will 
+    /// Performs write and read, the data read will
     /// be response to previous request as per the protocol
     /// arg: request -  bytes to write eg [0x00, 0x00, 0x00, 0x00]
-    /// return: bytes read from the device 
+    /// return: bytes read from the device
     fn frame(&mut self, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         self.cs.set_low();
         self.spi.write(request)?;
@@ -233,7 +264,6 @@ impl TiltSensor {
         self.cs.set_high();
         Ok(response)
     }
-
 }
 
 ///Fucntion used by calcualte_crc()
@@ -248,7 +278,6 @@ fn crc8(bit_value: u8, mut crc: u8) -> u8 {
     }
     crc
 }
-
 
 ///Calculates checksum for given data bytes
 /// Argument data: 32-bit / 4-byte data read from sensor

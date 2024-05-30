@@ -1,5 +1,5 @@
 [package]
-name = "SCL3300-tiltsensor"
+name = "scl3300-tiltsensor"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,8 +8,6 @@ rppal = "0.18.0"
 spidev = "0.6.0"
 log = "0.4"
 cadh = { git = "ssh://git@github.com/javerom/tlm.git" }
-cadh_builder = { git = "ssh://git@github.com/javerom/tlm.git" }
-crossbeam = "0.8"
 
 [dependencies.simple_logger]
 default-features = false
