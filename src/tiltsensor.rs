@@ -58,7 +58,7 @@ impl TiltSensor {
 
     fn start_up(&mut self) -> Result<(), Box<dyn Error>> {
         // Initialize the sensor
-        log::info!("****** start up sequence ******");
+        log::debug!("****** start up sequence ******");
         self.cs.set_high();
         sleep(Duration::from_millis(15));
         //Initial request
@@ -81,7 +81,7 @@ impl TiltSensor {
         let whoami = self.frame(Self::WHOAMI);
 
         //Print Startu-up sequence results
-        log::info!(
+        log::debug!(
             "SW_toBNK0 : [{}]",
             resp1
                 .iter()
@@ -89,7 +89,7 @@ impl TiltSensor {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log::info!(
+        log::debug!(
             "SW RESET  : [{}]",
             resp2
                 .iter()
@@ -97,7 +97,7 @@ impl TiltSensor {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log::info!(
+        log::debug!(
             "MODE 1    : [{}]",
             resp3
                 .iter()
@@ -105,7 +105,7 @@ impl TiltSensor {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log::info!(
+        log::debug!(
             "ANG CTRL  : [{}]",
             resp4
                 .iter()
@@ -113,7 +113,7 @@ impl TiltSensor {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log::info!(
+        log::debug!(
             "READ STAT : [{}]",
             resp5
                 .iter()
@@ -131,32 +131,32 @@ impl TiltSensor {
 
         if format!("{:02X}", resp1[3]) != crc1 {
             log::warn!("SW_TO_BNK_0 Checksum error:");
-            log::info!("resp1[3]: {}", format!("{:02X}", resp1[3]));
-            log::info!("calculated CRC: {}", crc1);
+            log::error!("resp1[3]: {}", format!("{:02X}", resp1[3]));
+            log::error!("calculated CRC: {}", crc1);
         }
         if format!("{:02X}", resp2[3]) != crc2 {
             log::warn!("SW_RESET Checksum error:");
-            log::info!("resp1[3]: {}", format!("{:02X}", resp2[3]));
-            log::info!("calculated CRC: {}", crc2);
+            log::error!("resp1[3]: {}", format!("{:02X}", resp2[3]));
+            log::error!("calculated CRC: {}", crc2);
         }
         if format!("{:02X}", resp3[3]) != crc3 {
             log::warn!("MODE_1 Checksum error:");
-            log::info!("resp1[3]: {}", format!("{:02X}", resp3[3]));
-            log::info!("calculated CRC: {}", crc3);
+            log::error!("resp1[3]: {}", format!("{:02X}", resp3[3]));
+            log::error!("calculated CRC: {}", crc3);
         }
         if format!("{:02X}", resp4[3]) != crc4 {
             log::warn!("ANG_CTRL Checksum error:");
-            log::info!("resp1[3]: {}", format!("{:02X}", resp4[3]));
-            log::info!("calculated CRC: {}", crc4);
+            log::error!("resp1[3]: {}", format!("{:02X}", resp4[3]));
+            log::error!("calculated CRC: {}", crc4);
         }
         if format!("{:02X}", resp5[3]) != crc5 {
             log::warn!("READ_STAT Checksum error:");
-            log::info!("resp1[3]: {}", format!("{:02X}", resp5[3]));
-            log::info!("calculated CRC: {}", crc5);
+            log::error!("resp1[3]: {}", format!("{:02X}", resp5[3]));
+            log::error!("calculated CRC: {}", crc5);
         }
 
         sleep(Duration::from_millis(25));
-        log::info!("*****start up sequence complete*****");
+        log::debug!("*****start up sequence complete*****");
 
         let data = match whoami {
             Ok(data) => data,
