@@ -1,5 +1,5 @@
-use rppal::gpio::OutputPin;
-use spidev::Spidev;
+use rppal::gpio::{Gpio, OutputPin};
+use spidev::{SpiModeFlags, Spidev, SpidevOptions};
 use std::error::Error;
 use std::io::{Read, Write};
 use std::thread::sleep;
@@ -27,6 +27,21 @@ impl TiltSensor {
     const ANG_X: &[u8] = &[0x24, 0x00, 0x00, 0xC7];
     const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
     const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
+
+    pub fn init<P: AsRef<std::path::Path>>(dev: P, pin: u8) -> Result<Self, Box<dyn Error>> {
+        //set up spi device
+        let mut spi = Spidev::open(dev.as_ref())?;
+        let options = SpidevOptions::new()
+            .max_speed_hz(2_000_000)
+            .mode(SpiModeFlags::SPI_MODE_0)
+            .build();
+        spi.configure(&options).expect("SPI configuration failed");
+        //configure cs pin
+        let mut cs = Gpio::new()?.get(pin)?.into_output();
+        cs.set_high();
+        sleep(Duration::from_millis(50));
+        Self::new(spi, cs)
+    }
 
     pub fn new(spi: Spidev, cs: OutputPin) -> Result<Self, Box<dyn Error>> {
         let mut ts = TiltSensor {
