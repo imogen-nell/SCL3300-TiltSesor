@@ -7,6 +7,9 @@ use std::time::Duration;
 
 use scl3300_tiltsensor::tiltsensor;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
 const CS_TILT: u8 = 18; // pin12 is BCM 18
 const BUS: u8 = 1;
 const DEV: u8 = 0;
@@ -30,6 +33,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let tilt = tiltsensor::TiltSensor::new(spi, cs)?;
     let thread = tilt.spawn_to_thread()?;
 
+
+
+
     loop {
         if let Some(data) = thread.try_iter().last() {
             println!("*********************");
@@ -37,6 +43,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Y: {} deg", data[1]);
             println!("Z: {} deg", data[2]);
             println!("*********************");
+            let mut file = OpenOptions::new().append(true).open("data.csv").unwrap();
+            writeln!(file, "{},{},{}", data[0], data[1], data[2]).unwrap();
         }
         sleep(Duration::from_millis(500));
     }
