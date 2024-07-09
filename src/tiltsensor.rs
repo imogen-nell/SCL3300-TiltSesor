@@ -322,8 +322,8 @@ fn bytes_to_u32(data: &[u8]) -> u32 {
 fn angle_conversion(data: Vec<u8>) -> f64 {
     let val_unsig = u16::from_le_bytes([data[0], data[1]]) as f64;
     let angle = (val_unsig / 2_i16.pow(14) as f64) * 90.0;
-    // if angle > 90.0 {
-    //     return ((angle - 360.0) * 100.0).round() / 100.0;
-    // }
+    if angle > 180.0 {
+        return (angle - 360.0) ;
+    }
     angle
 }
