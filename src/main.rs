@@ -43,8 +43,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Y: {} deg", data[1]);
             println!("Z: {} deg", data[2]);
             println!("*********************");
-            let mut file = OpenOptions::new().append(true).open("data.csv").unwrap();
-            writeln!(file, "{},{},{}", data[0], data[1], data[2]).unwrap();
         }
         sleep(Duration::from_millis(500));
     }
