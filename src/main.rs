@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use scl3300_tiltsensor::tiltsensor;
 
-use std::fs::OpenOptions;
-use std::io::Write;
+// use std::fs::OpenOptions;
+// use std::io::Write;
 
 const CS_TILT: u8 = 18; // pin12 is BCM 18
 const BUS: u8 = 1;

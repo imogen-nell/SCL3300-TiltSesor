@@ -21,6 +21,9 @@ impl TiltSensor {
     const WHOAMI: &[u8] = &[0x40, 0x00, 0x00, 0x91];
     const READ_STAT: &[u8] = &[0x18, 0x00, 0x00, 0xE5];
     const MODE_1: &[u8] = &[0xB4, 0x00, 0x00, 0x1F];
+    const MODE_2: &[u8] = &[0xB4, 0x00, 0x01, 0x02]; 
+    const MODE_3: &[u8] = &[0xB4, 0x00, 0x02, 0x25]; //inclination mode
+    const MODE_4: &[u8] = &[0xB4, 0x00, 0x03, 0x38];
     const WAKE_UP: &[u8] = &[0xB4, 0x00, 0x00, 0x1F];
     const ANG_CTRL: &[u8] = &[0xB0, 0x00, 0x1F, 0x6F];
     const SW_TO_BNK0: &[u8] = &[0xFC, 0x00, 0x00, 0x73];
@@ -36,7 +39,7 @@ impl TiltSensor {
             y_ang: 0.0,
             z_ang: 0.0,
         };
-        ts.start_up()?;
+        //ts.start_up()?; //sensor starts up in the thread, dont start uo twice unless needed
         log::info!("Tilt Sensor initialized");
         Ok(ts)
     }
@@ -44,25 +47,22 @@ impl TiltSensor {
     fn start_up(&mut self) -> Result<(), Box<dyn Error>> {
         // Initialize the sensor
         log::debug!("****** start up sequence ******");
-        //self.cs.set_high();
-        sleep(Duration::from_millis(15));
         //Initial request
         //No data can be read in this frame
-        //self.cs.set_low();
         self.spi.write(Self::WAKE_UP).unwrap();
-        //self.cs.set_low();
-        sleep(Duration::from_millis(15));
-        //self.cs.set_high();
-        //Start-up Sequence
-        let _resp = self.frame(Self::SW_TO_BNK0);
         sleep(Duration::from_millis(1));
+        //Start-up Sequence
+        // let _resp = self.frame(Self::SW_TO_BNK0);
+        // sleep(Duration::from_millis(1));
         let resp1 = self.frame(Self::SW_RESET)?;
         sleep(Duration::from_millis(1));
-        let resp2 = self.frame(Self::MODE_1)?;
+        let resp2 = self.frame(Self::MODE_4)?; //mode 1 
         let resp3 = self.frame(Self::ANG_CTRL)?;
-        sleep(Duration::from_millis(25));
+        sleep(Duration::from_millis(100));
         let resp4 = self.frame(Self::READ_STAT)?;
-        let resp5 = self.frame(Self::WHOAMI)?;
+        let resp5 = self.frame(Self::READ_STAT)?;
+        _ = self.frame(Self::READ_STAT);
+        _ = self.frame(Self::WHOAMI);
         let whoami = self.frame(Self::WHOAMI);
 
         //Print Startu-up sequence results
@@ -235,12 +235,13 @@ impl TiltSensor {
     ///Returns: angle in degrees from -90 to 90
     fn execute_angle(&mut self, command: &[u8]) -> Result<f64, Box<dyn Error>> {
         //write in previous frame to ensure no garbage values
-        //self.cs.set_low();
         self.spi.write(command)?;
-        sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
-        //self.cs.set_high();
+        sleep(Duration::from_millis(10)); // Must give it at least 10ms to process
 
-        let resp = self.frame(command)?;
+        //let resp = self.frame(command)?;
+        let resp = self.read()?;
+
+    //    _ = self.check_rs(resp.as_slice());
 
         if resp[3] as u8 != calculate_crc(bytes_to_u32(&resp)) {
             return Err(From::from("checksum error"));
@@ -250,18 +251,31 @@ impl TiltSensor {
         Ok(angle)
     }
 
+    fn read(&mut self)-> Result<Vec<u8>, Box<dyn Error>> {
+        let mut response = vec![0u8; 4];
+        self.spi.read(&mut response)?;
+        Ok(response)
+    }
+
+    fn check_rs(&self, slice: &[u8]) -> Result<(), Box<dyn Error>> {
+
+        let num = i64::from_str_radix(&format!("{:X}", slice[0]), 16).unwrap();
+        let rs = (num & 0b11) as u8;
+        if rs != 1 {
+            log::warn!("RS ERR: {}", rs);
+        }
+        Ok(())
+    }
+
     /// Performs write and read, the data read will
     /// be response to previous request as per the protocol
     /// arg: request -  bytes to write eg [0x00, 0x00, 0x00, 0x00]
     /// return: bytes read from the device
     fn frame(&mut self, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-        //self.cs.set_low();
         self.spi.write(request)?;
         sleep(Duration::from_millis(10));
         let mut response = vec![0u8; 4];
         self.spi.read(&mut response)?;
-        sleep(Duration::from_millis(10));
-        //self.cs.set_high();
         Ok(response)
     }
 }
@@ -305,7 +319,7 @@ fn bytes_to_u32(data: &[u8]) -> u32 {
 ///Argument data: 4-byte data read from sensor
 ///Returns: angle in degrees from -90 to 90
 fn angle_conversion(data: Vec<u8>) -> f64 {
-    let val_unsig = u16::from_le_bytes([data[0], data[1]]) as f64;
+    let val_unsig = u16::from_be_bytes([data[1], data[2]]) as f64;
     let angle = (val_unsig / 2_i16.pow(14) as f64) * 90.0;
     if angle > 180.0 {
         return (angle - 360.0) ;
