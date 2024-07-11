@@ -35,6 +35,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let tilt = tiltsensor::TiltSensor::new(spi, cs)?;
     let thread = tilt.spawn_to_thread()?;
 
+    //create or open CSV file
+    // let mut file = OpenOptions::new()
+    // .append(true)
+    // .create(true)
+    // .open("tilt_data.csv")?;
+
     loop {
         if let Some(data) = thread.try_iter().last() {
             println!("*********************");
@@ -42,8 +48,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Y: {} deg", data[1]);
             println!("Z: {} deg", data[2]);
             println!("*********************");
+
+            // writeln!(file, "{},{},{}", data[0], data[1], data[2])?;
         }
-        sleep(Duration::from_millis(500));
+
+
+        // sleep(Duration::from_millis(500));
     }
 
 }
