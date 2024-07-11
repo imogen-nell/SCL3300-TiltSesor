@@ -28,21 +28,6 @@ impl TiltSensor {
     const ANG_Y: &[u8] = &[0x28, 0x00, 0x00, 0xCD];
     const ANG_Z: &[u8] = &[0x2C, 0x00, 0x00, 0xCB];
 
-    pub fn init<P: AsRef<std::path::Path>>(dev: P, pin: u8) -> Result<Self, Box<dyn Error>> {
-        //set up spi device
-        let mut spi = Spidev::open(dev.as_ref())?;
-        let options = SpidevOptions::new()
-            .max_speed_hz(2_000_000)
-            .mode(SpiModeFlags::SPI_MODE_0)
-            .build();
-        spi.configure(&options).expect("SPI configuration failed");
-        //configure cs pin
-        let mut cs = Gpio::new()?.get(pin)?.into_output();
-        cs.set_high();
-        sleep(Duration::from_millis(50));
-        Self::new(spi, cs)
-    }
-
     pub fn new(spi: Spidev, cs: OutputPin) -> Result<Self, Box<dyn Error>> {
         let mut ts = TiltSensor {
             spi,
@@ -59,15 +44,15 @@ impl TiltSensor {
     fn start_up(&mut self) -> Result<(), Box<dyn Error>> {
         // Initialize the sensor
         log::debug!("****** start up sequence ******");
-        self.cs.set_high();
+        //self.cs.set_high();
         sleep(Duration::from_millis(15));
         //Initial request
         //No data can be read in this frame
-        self.cs.set_low();
+        //self.cs.set_low();
         self.spi.write(Self::WAKE_UP).unwrap();
-        self.cs.set_low();
+        //self.cs.set_low();
         sleep(Duration::from_millis(15));
-        self.cs.set_high();
+        //self.cs.set_high();
         //Start-up Sequence
         let _resp = self.frame(Self::SW_TO_BNK0);
         sleep(Duration::from_millis(1));
@@ -250,10 +235,10 @@ impl TiltSensor {
     ///Returns: angle in degrees from -90 to 90
     fn execute_angle(&mut self, command: &[u8]) -> Result<f64, Box<dyn Error>> {
         //write in previous frame to ensure no garbage values
-        self.cs.set_low();
+        //self.cs.set_low();
         self.spi.write(command)?;
         sleep(Duration::from_millis(20)); // Must give it at least 10ms to process
-        self.cs.set_high();
+        //self.cs.set_high();
 
         let resp = self.frame(command)?;
 
@@ -270,13 +255,13 @@ impl TiltSensor {
     /// arg: request -  bytes to write eg [0x00, 0x00, 0x00, 0x00]
     /// return: bytes read from the device
     fn frame(&mut self, request: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-        self.cs.set_low();
+        //self.cs.set_low();
         self.spi.write(request)?;
         sleep(Duration::from_millis(10));
         let mut response = vec![0u8; 4];
         self.spi.read(&mut response)?;
         sleep(Duration::from_millis(10));
-        self.cs.set_high();
+        //self.cs.set_high();
         Ok(response)
     }
 }

@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .mode(SpiModeFlags::SPI_MODE_0)
         .build();
     spi.configure(&options).expect("SPI configuration failed");
+
     //configure cs pin
     let mut cs = Gpio::new()?.get(CS_TILT)?.into_output();
     cs.set_high();
@@ -29,12 +30,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //use simple_logger to log messages
     SimpleLogger::new().init().unwrap();
+
     //initialize tilt sensor
     let tilt = tiltsensor::TiltSensor::new(spi, cs)?;
     let thread = tilt.spawn_to_thread()?;
-
-
-
 
     loop {
         if let Some(data) = thread.try_iter().last() {
@@ -47,5 +46,4 @@ fn main() -> Result<(), Box<dyn Error>> {
         sleep(Duration::from_millis(500));
     }
 
-    //Ok(())
 }
